@@ -27,12 +27,22 @@ pub enum Kind {
     Bin,
     Baseplate,
     ToolHolder,
+    BatteryTray,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ToolHoleKind {
     HexBit, // 1/4" шестигранник
     Round,  // Цилиндрическое сверло
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BatteryKind {
+    AA,
+    AAA,
+    B18650,
+    B21700,
+    Custom,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -57,6 +67,12 @@ pub struct Params {
     pub tool_hole_kind: ToolHoleKind,
     pub tool_hole_depth: f64,
     pub tool_hole_size: f64,
+    // Параметры кассеты батареек
+    pub battery_kind: BatteryKind,
+    pub battery_holes_x: u32,
+    pub battery_holes_y: u32,
+    pub battery_hole_depth: f64,
+    pub battery_hole_dia: f64,
 }
 
 impl Default for Params {
@@ -79,7 +95,12 @@ impl Default for Params {
             tool_holes_y: 2,
             tool_hole_kind: ToolHoleKind::HexBit,
             tool_hole_depth: 10.0,
-            tool_hole_size: 6.8, // 6.35 мм + зазор под печать
+            tool_hole_size: 6.8,
+            battery_kind: BatteryKind::AA,
+            battery_holes_x: 4,
+            battery_holes_y: 2,
+            battery_hole_depth: 25.0,
+            battery_hole_dia: 15.0, // AA 14.5 мм + зазор 0.5 мм
         }
     }
 }
@@ -89,6 +110,7 @@ pub const HEIGHT_RANGE: (u32, u32) = (2, 18);
 pub const DIV_RANGE: (u32, u32) = (1, 8);
 pub const WALL_RANGE: (f64, f64) = (0.8, 2.4);
 pub const TOOL_HOLES_RANGE: (u32, u32) = (1, 16);
+pub const BATTERY_HOLES_RANGE: (u32, u32) = (1, 16);
 
 /// Non-fatal adjustments the generator had to make.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -111,6 +133,10 @@ impl Params {
         p.tool_holes_y = p.tool_holes_y.clamp(TOOL_HOLES_RANGE.0, TOOL_HOLES_RANGE.1);
         p.tool_hole_depth = if p.tool_hole_depth.is_finite() { p.tool_hole_depth.clamp(2.0, 50.0) } else { 10.0 };
         p.tool_hole_size = if p.tool_hole_size.is_finite() { p.tool_hole_size.clamp(1.5, 20.0) } else { 6.8 };
+        p.battery_holes_x = p.battery_holes_x.clamp(BATTERY_HOLES_RANGE.0, BATTERY_HOLES_RANGE.1);
+        p.battery_holes_y = p.battery_holes_y.clamp(BATTERY_HOLES_RANGE.0, BATTERY_HOLES_RANGE.1);
+        p.battery_hole_depth = if p.battery_hole_depth.is_finite() { p.battery_hole_depth.clamp(3.0, 75.0) } else { 25.0 };
+        p.battery_hole_dia = if p.battery_hole_dia.is_finite() { p.battery_hole_dia.clamp(5.0, 35.0) } else { 15.0 };
         p
     }
 
@@ -124,6 +150,11 @@ impl Params {
                 p.height_u as f64 * HEIGHT_UNIT + if p.lip { LIP_HEIGHT } else { 0.0 },
             ],
             Kind::ToolHolder => [
+                p.units_x as f64 * PITCH - CLEARANCE,
+                p.units_y as f64 * PITCH - CLEARANCE,
+                p.height_u as f64 * HEIGHT_UNIT,
+            ],
+            Kind::BatteryTray => [
                 p.units_x as f64 * PITCH - CLEARANCE,
                 p.units_y as f64 * PITCH - CLEARANCE,
                 p.height_u as f64 * HEIGHT_UNIT,
@@ -142,6 +173,7 @@ impl Params {
         match p.kind {
             Kind::Bin => format!("bin_{}x{}x{}", p.units_x, p.units_y, p.height_u),
             Kind::ToolHolder => format!("tools_{}x{}x{}", p.units_x, p.units_y, p.height_u),
+            Kind::BatteryTray => format!("battery_{}x{}x{}", p.units_x, p.units_y, p.height_u),
             Kind::Baseplate => format!("baseplate_{}x{}", p.units_x, p.units_y),
         }
     }
@@ -154,6 +186,7 @@ pub fn generate(params: &Params) -> (Mesh, Vec<Warning>) {
     match p.kind {
         Kind::Bin => bin(&p),
         Kind::ToolHolder => (tool_holder(&p), Vec::new()),
+        Kind::BatteryTray => (battery_tray(&p), Vec::new()),
         Kind::Baseplate => (baseplate(&p), Vec::new()),
     }
 }
@@ -471,6 +504,66 @@ fn tool_holder(p: &Params) -> Mesh {
     build(&slabs)
 }
 
+fn battery_tray(p: &Params) -> Mesh {
+    let [w, d, _] = p.size();
+    let total_h = p.height_u as f64 * HEIGHT_UNIT;
+    let outline = inset_rect(w, d, BIN_RADIUS, 0.0);
+
+    let mut slabs: Vec<Slab> = Vec::new();
+    add_feet_slabs(p, w, d, &outline, &mut slabs);
+
+    let hole_depth = p.battery_hole_depth.min(total_h - FLOOR_TOP - 1.0).max(1.0);
+    let floor_holes_z = total_h - hole_depth;
+
+    let margin = 3.5;
+    let usable_w = w - 2.0 * margin;
+    let usable_d = d - 2.0 * margin;
+
+    let mut hole_centers = Vec::new();
+    let nx = p.battery_holes_x;
+    let ny = p.battery_holes_y;
+    for j in 0..ny {
+        for i in 0..nx {
+            let cx = if nx > 1 {
+                -usable_w / 2.0 + (i as f64 / (nx as f64 - 1.0)) * usable_w
+            } else {
+                0.0
+            };
+            let cy = if ny > 1 {
+                -usable_d / 2.0 + (j as f64 / (ny as f64 - 1.0)) * usable_d
+            } else {
+                0.0
+            };
+            hole_centers.push((cx, cy));
+        }
+    }
+
+    let hole_rings: Vec<Vec<P2>> = hole_centers
+        .iter()
+        .map(|&(cx, cy)| circle(cx, cy, p.battery_hole_dia / 2.0, 32))
+        .collect();
+
+    if floor_holes_z > FLOOR_TOP + 1e-4 {
+        slabs.push(Slab {
+            z0: FLOOR_TOP,
+            z1: floor_holes_z,
+            rings: vec![Ring::prism(outline.clone(), false)],
+        });
+    }
+
+    let mut upper_rings = vec![Ring::prism(outline.clone(), false)];
+    for hr in hole_rings {
+        upper_rings.push(Ring::prism(hr, true));
+    }
+    slabs.push(Slab {
+        z0: floor_holes_z,
+        z1: total_h,
+        rings: upper_rings,
+    });
+
+    build(&slabs)
+}
+
 const PLATE_PROFILE: f64 = 4.45;
 
 fn plate_floor(p: &Params) -> f64 {
@@ -560,6 +653,22 @@ mod tests {
             ..Params::default()
         };
         check(&p_round);
+    }
+
+    #[test]
+    fn battery_tray_is_closed() {
+        let p_aa = Params {
+            kind: Kind::BatteryTray,
+            units_x: 1,
+            units_y: 1,
+            height_u: 5,
+            battery_holes_x: 2,
+            battery_holes_y: 2,
+            battery_hole_depth: 25.0,
+            battery_hole_dia: 15.0,
+            ..Params::default()
+        };
+        check(&p_aa);
     }
 
     #[test]

@@ -4,7 +4,9 @@ use crate::i18n::{Lang, Strings};
 use crate::preview::Preview;
 use crate::theme::{self, Palette, ThemeKind};
 use eframe::egui::{self, Color32, CornerRadius, Margin, RichText, Stroke};
-use generator_3mf_core::gridfinity::{ToolHoleKind, DIV_RANGE, HEIGHT_RANGE, TOOL_HOLES_RANGE, UNITS_RANGE, WALL_RANGE};
+use generator_3mf_core::gridfinity::{
+    BatteryKind, ToolHoleKind, BATTERY_HOLES_RANGE, DIV_RANGE, HEIGHT_RANGE, TOOL_HOLES_RANGE, UNITS_RANGE, WALL_RANGE,
+};
 use generator_3mf_core::{export, generate, Kind, Mesh, Params, Warning};
 
 #[allow(dead_code)]
@@ -92,10 +94,11 @@ fn params_to_string(p: &Params) -> String {
     let k_str = match p.kind {
         Kind::Bin => "bin",
         Kind::ToolHolder => "tool",
+        Kind::BatteryTray => "battery",
         Kind::Baseplate => "plate",
     };
     format!(
-        "{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{}",
+        "{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{}",
         k_str,
         p.units_x,
         p.units_y,
@@ -114,6 +117,17 @@ fn params_to_string(p: &Params) -> String {
         match p.tool_hole_kind { ToolHoleKind::HexBit => 0, ToolHoleKind::Round => 1 },
         p.tool_hole_depth,
         p.tool_hole_size,
+        match p.battery_kind {
+            BatteryKind::AA => 0,
+            BatteryKind::AAA => 1,
+            BatteryKind::B18650 => 2,
+            BatteryKind::B21700 => 3,
+            BatteryKind::Custom => 4,
+        },
+        p.battery_holes_x,
+        p.battery_holes_y,
+        p.battery_hole_depth,
+        p.battery_hole_dia,
     )
 }
 
@@ -126,6 +140,7 @@ fn params_from_string(s: &str) -> Option<Params> {
     let n = |i: usize| f[i].parse::<u32>().ok();
     let kind = match f[0] {
         "tool" => Kind::ToolHolder,
+        "battery" => Kind::BatteryTray,
         "plate" => Kind::Baseplate,
         _ => Kind::Bin,
     };
@@ -138,6 +153,18 @@ fn params_from_string(s: &str) -> Option<Params> {
     };
     let tool_hole_depth = f.get(16).and_then(|s| s.parse().ok()).unwrap_or(10.0);
     let tool_hole_size = f.get(17).and_then(|s| s.parse().ok()).unwrap_or(6.8);
+
+    let battery_kind = match f.get(18).and_then(|s| s.parse::<u32>().ok()).unwrap_or(0) {
+        1 => BatteryKind::AAA,
+        2 => BatteryKind::B18650,
+        3 => BatteryKind::B21700,
+        4 => BatteryKind::Custom,
+        _ => BatteryKind::AA,
+    };
+    let battery_holes_x = f.get(19).and_then(|s| s.parse().ok()).unwrap_or(4);
+    let battery_holes_y = f.get(20).and_then(|s| s.parse().ok()).unwrap_or(2);
+    let battery_hole_depth = f.get(21).and_then(|s| s.parse().ok()).unwrap_or(25.0);
+    let battery_hole_dia = f.get(22).and_then(|s| s.parse().ok()).unwrap_or(15.0);
 
     Some(
         Params {
@@ -159,6 +186,11 @@ fn params_from_string(s: &str) -> Option<Params> {
             tool_hole_kind,
             tool_hole_depth,
             tool_hole_size,
+            battery_kind,
+            battery_holes_x,
+            battery_holes_y,
+            battery_hole_depth,
+            battery_hole_dia,
         }
         .clamped(),
     )
@@ -213,6 +245,7 @@ impl GeneratorApp {
                 app.tab = match p.kind {
                     Kind::Bin => ActiveTab::Bins,
                     Kind::ToolHolder => ActiveTab::Tools,
+                    Kind::BatteryTray => ActiveTab::Batteries,
                     Kind::Baseplate => ActiveTab::Baseplates,
                 };
                 app.params = p;
@@ -411,6 +444,7 @@ impl GeneratorApp {
                     match tab {
                         ActiveTab::Bins => self.params.kind = Kind::Bin,
                         ActiveTab::Tools => self.params.kind = Kind::ToolHolder,
+                        ActiveTab::Batteries => self.params.kind = Kind::BatteryTray,
                         ActiveTab::Baseplates => self.params.kind = Kind::Baseplate,
                         _ => {}
                     }
@@ -526,6 +560,61 @@ impl GeneratorApp {
                 ui.add_space(8.0);
             }
 
+            ActiveTab::Batteries => {
+                card(ui, pal, t.part, |ui| {
+                    changed |= stepper(ui, t.units_wide, Some(t.units_hint), &mut self.params.units_x, UNITS_RANGE);
+                    changed |= stepper(ui, t.units_deep, Some(t.units_hint), &mut self.params.units_y, UNITS_RANGE);
+                    changed |= stepper(ui, t.height_u, Some(t.height_hint), &mut self.params.height_u, (3, 14));
+                    ui.label(RichText::new(t.height_hint).size(12.5).color(pal.muted));
+                });
+                ui.add_space(8.0);
+
+                card(ui, pal, t.battery_features, |ui| {
+                    ui.label(RichText::new(t.battery_type).color(pal.muted));
+                    ui.horizontal_wrapped(|ui| {
+                        let types = [
+                            (BatteryKind::AA, "AA (Ø15)", 15.0, 25.0, 5),
+                            (BatteryKind::AAA, "AAA (Ø11.2)", 11.2, 20.0, 4),
+                            (BatteryKind::B18650, "18650 (Ø19.2)", 19.2, 35.0, 6),
+                            (BatteryKind::B21700, "21700 (Ø22.4)", 22.4, 40.0, 7),
+                            (BatteryKind::Custom, "Свой", self.params.battery_hole_dia, self.params.battery_hole_depth, self.params.height_u),
+                        ];
+                        for (k, label, dia, depth, def_h) in types {
+                            let on = self.params.battery_kind == k;
+                            if ui.selectable_label(on, label).clicked() {
+                                self.params.battery_kind = k;
+                                if k != BatteryKind::Custom {
+                                    self.params.battery_hole_dia = dia;
+                                    self.params.battery_hole_depth = depth;
+                                    self.params.height_u = self.params.height_u.max(def_h);
+                                }
+                                changed = true;
+                            }
+                        }
+                    });
+                    ui.add_space(4.0);
+                    changed |= stepper(ui, t.battery_holes_across, None, &mut self.params.battery_holes_x, (1, 16));
+                    changed |= stepper(ui, t.battery_holes_deep, None, &mut self.params.battery_holes_y, (1, 16));
+                    ui.add_space(4.0);
+                    ui.horizontal(|ui| {
+                        ui.label(t.battery_hole_depth);
+                        changed |= ui.add(egui::Slider::new(&mut self.params.battery_hole_depth, 5.0..=65.0).step_by(0.5).fixed_decimals(1)).changed();
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label(t.battery_hole_dia);
+                        changed |= ui.add(egui::Slider::new(&mut self.params.battery_hole_dia, 6.0..=35.0).step_by(0.1).fixed_decimals(1)).changed();
+                    });
+                    ui.add_space(4.0);
+                    changed |= toggle(ui, pal, t.magnets, t.magnets_hint, &mut self.params.magnets);
+                    changed |= toggle(ui, pal, t.screws, t.screws_hint, &mut self.params.screws);
+                    ui.horizontal(|ui| {
+                        ui.label(t.color);
+                        ui.color_edit_button_srgb(&mut self.color);
+                    });
+                });
+                ui.add_space(8.0);
+            }
+
             ActiveTab::Baseplates => {
                 card(ui, pal, t.part, |ui| {
                     changed |= stepper(ui, t.units_wide, Some(t.units_hint), &mut self.params.units_x, UNITS_RANGE);
@@ -540,13 +629,6 @@ impl GeneratorApp {
                         ui.label(t.color);
                         ui.color_edit_button_srgb(&mut self.color);
                     });
-                });
-                ui.add_space(8.0);
-            }
-
-            ActiveTab::Batteries => {
-                card(ui, pal, t.tab_batteries, |ui| {
-                    ui.label(RichText::new("Раздел в разработке: скоро здесь появятся кассеты для 18650, AA и AAA.").color(pal.muted));
                 });
                 ui.add_space(8.0);
             }
@@ -616,6 +698,9 @@ impl GeneratorApp {
                 };
                 lines.push(format!("Отсеки: {} × {} ({})", p.tool_holes_x, p.tool_holes_y, k_desc));
             }
+            Kind::BatteryTray => {
+                lines.push(format!("{}: {} × {} (Ø{:.1} мм)", t.compartments, p.battery_holes_x, p.battery_holes_y, p.battery_hole_dia));
+            }
             Kind::Baseplate => {}
         }
         if let Some(m) = &self.mesh {
@@ -626,6 +711,7 @@ impl GeneratorApp {
         let kind = match p.kind {
             Kind::Bin => t.bin,
             Kind::ToolHolder => t.tool_holder,
+            Kind::BatteryTray => t.battery_tray,
             Kind::Baseplate => t.baseplate,
         };
         painter.text(egui::pos2(rect.left() + 14.0, y), egui::Align2::LEFT_TOP, kind, egui::FontId::proportional(16.0), pal.text);

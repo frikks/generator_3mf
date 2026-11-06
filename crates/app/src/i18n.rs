@@ -48,6 +48,7 @@ pub struct Strings {
     pub bin: &'static str,
     pub baseplate: &'static str,
     pub tool_holder: &'static str,
+    pub battery_tray: &'static str,
     pub units_wide: &'static str,
     pub units_deep: &'static str,
     pub height_u: &'static str,
@@ -56,6 +57,7 @@ pub struct Strings {
     pub bin_features: &'static str,
     pub plate_features: &'static str,
     pub tool_features: &'static str,
+    pub battery_features: &'static str,
     pub comps_across: &'static str,
     pub comps_deep: &'static str,
     pub lip: &'static str,
@@ -117,6 +119,11 @@ pub struct Strings {
     pub tool_hole_depth: &'static str,
     pub tool_hole_size: &'static str,
     pub tool_hole_size_hint: &'static str,
+    pub battery_type: &'static str,
+    pub battery_holes_across: &'static str,
+    pub battery_holes_deep: &'static str,
+    pub battery_hole_depth: &'static str,
+    pub battery_hole_dia: &'static str,
 }
 
 pub static EN: Strings = Strings {
@@ -131,6 +138,7 @@ pub static EN: Strings = Strings {
     bin: "Bin",
     baseplate: "Baseplate",
     tool_holder: "Tool holder",
+    battery_tray: "Battery tray",
     units_wide: "Units wide",
     units_deep: "Units deep",
     height_u: "Height (u)",
@@ -139,6 +147,7 @@ pub static EN: Strings = Strings {
     bin_features: "2 · Bin features",
     plate_features: "2 · Baseplate features",
     tool_features: "2 · Tool holder features",
+    battery_features: "2 · Battery tray features",
     comps_across: "Compartments across",
     comps_deep: "Compartments deep",
     lip: "Stacking lip",
@@ -204,6 +213,11 @@ pub static EN: Strings = Strings {
     tool_hole_depth: "Depth (mm)",
     tool_hole_size: "Hole size (mm)",
     tool_hole_size_hint: "For 1/4\" bits use ~6.8 mm. For drills enter drill diameter + 0.3..0.5 mm.",
+    battery_type: "Battery type",
+    battery_holes_across: "Batteries across",
+    battery_holes_deep: "Batteries deep",
+    battery_hole_depth: "Pocket depth (mm)",
+    battery_hole_dia: "Pocket diameter (mm)",
 };
 
 pub static RU: Strings = Strings {
@@ -218,6 +232,7 @@ pub static RU: Strings = Strings {
     bin: "Контейнер",
     baseplate: "Основание",
     tool_holder: "Держатель инструмента",
+    battery_tray: "Кассета для батареек",
     units_wide: "Ячеек в ширину",
     units_deep: "Ячеек в глубину",
     height_u: "Высота (u)",
@@ -226,6 +241,7 @@ pub static RU: Strings = Strings {
     bin_features: "2 · Параметры контейнера",
     plate_features: "2 · Параметры основания",
     tool_features: "2 · Параметры держателя",
+    battery_features: "2 · Параметры кассеты",
     comps_across: "Отсеков в ширину",
     comps_deep: "Отсеков в глубину",
     lip: "Бортик для штабелирования",
@@ -291,4 +307,9 @@ pub static RU: Strings = Strings {
     tool_hole_depth: "Глубина отверстий (мм)",
     tool_hole_size: "Размер / диаметр (мм)",
     tool_hole_size_hint: "Для бит 1/4\" оптимально ~6.8 мм. Для свёрл укажите диаметр сверла + 0.3..0.5 мм.",
+    battery_type: "Тип батарейки / аккумулятора",
+    battery_holes_across: "Батареек в ширину",
+    battery_holes_deep: "Батареек в глубину",
+    battery_hole_depth: "Глубина посадки (мм)",
+    battery_hole_dia: "Диаметр ячейки (мм)",
 };
