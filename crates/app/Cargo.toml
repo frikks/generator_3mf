@@ -7,6 +7,9 @@ authors.workspace = true
 repository.workspace = true
 description = "Cross-platform GUI for ГЕНЕратор"
 
+[target.'cfg(target_os = "android")'.dependencies]
+winit = { version = "0.30", features = ["android-game-activity"] }
+
 [lib]
 name = "generator_3mf"
 crate-type = ["cdylib", "rlib"]

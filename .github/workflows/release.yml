@@ -87,7 +87,7 @@ jobs:
           cargo apk build -p generator_3mf_app --release --lib
           VERSION=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
           mkdir -p out
-          cp target/release/apk/generator_3mf.apk "out/generator_3mf-${VERSION}-android.apk"
+          cp target/release/apk/*.apk "out/generator_3mf-${VERSION}-android.apk"
       - uses: actions/upload-artifact@v4
         with:
           name: android
