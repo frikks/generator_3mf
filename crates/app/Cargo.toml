@@ -1,27 +1,31 @@
 [package]
 name = "generator_3mf_app"
-version.workspace = true
-edition.workspace = true
-license.workspace = true
-authors.workspace = true
-repository.workspace = true
-description = "Cross-platform GUI for ГЕНЕратор"
-
-[target.'cfg(target_os = "android")'.dependencies]
-winit = { version = "0.30", features = ["android-game-activity"] }
+version = "0.2.0"
+edition = "2021"
 
 [lib]
 name = "generator_3mf"
 crate-type = ["cdylib", "rlib"]
 
+[[bin]]
+name = "generator_3mf"
+path = "src/main.rs"
+
 [dependencies]
 generator_3mf_core = { path = "../core" }
-eframe = { version = "0.30", default-features = false, features = ["default_fonts", "glow", "persistence"] }
+egui = "0.30"
+eframe = { version = "0.30", default-features = false, features = [
+    "default_fonts",
+    "glow",
+] }
+image = { version = "0.25", default-features = false, features = ["png"] }
 sys-locale = "0.3"
 
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+# Зависимость rfd только для десктопных ОС (Windows, Linux, macOS)
+[target.'cfg(not(any(target_arch = "wasm32", target_os = "android")))'.dependencies]
 rfd = "0.15"
 
+# Зависимости для WebAssembly
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
@@ -37,6 +41,6 @@ web-sys = { version = "0.3", features = [
     "Window",
 ] }
 
-[[bin]]
-name = "generator_3mf"
-path = "src/main.rs"
+# Зависимости для Android (активация бэкенда game-activity для winit/android-activity)
+[target.'cfg(target_os = "android")'.dependencies]
+winit = { version = "0.30", features = ["android-game-activity"] }
