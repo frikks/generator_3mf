@@ -3,7 +3,7 @@
 use crate::i18n::{Lang, Strings};
 use crate::preview::Preview;
 use crate::theme::{self, Palette, ThemeKind};
-use eframe::egui::{self, Color32, CornerRadius, Margin, RichText, Stroke};
+use eframe::egui::{self, Color32, Margin, RichText, Rounding, Stroke};
 use generator_3mf_core::gridfinity::{
     BatteryKind, ToolHoleKind, BATTERY_HOLES_RANGE, DIV_RANGE, HEIGHT_RANGE, TOOL_HOLES_RANGE, UNITS_RANGE, WALL_RANGE,
 };
@@ -340,11 +340,11 @@ impl GeneratorApp {
 }
 
 fn card<R>(ui: &mut egui::Ui, pal: &Palette, title: &str, add: impl FnOnce(&mut egui::Ui) -> R) -> R {
-    egui::Frame::new()
+    egui::Frame::none()
         .fill(pal.panel)
         .stroke(Stroke::new(1.0, pal.border))
-        .corner_radius(CornerRadius::same(12))
-        .inner_margin(Margin::same(14))
+        .rounding(Rounding::same(12.0))
+        .inner_margin(Margin::same(14.0))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             ui.label(RichText::new(title).strong().size(16.0));
@@ -413,7 +413,7 @@ impl GeneratorApp {
                     }
                 }
                 ui.add_space(6.0);
-                egui::ComboBox::from_id_salt("theme")
+                egui::ComboBox::from_id_source("theme")
                     .selected_text(if narrow { self.theme.label(t).to_string() } else { format!("{}: {}", t.theme, self.theme.label(t)) })
                     .show_ui(ui, |ui| {
                         for k in ThemeKind::ALL {
@@ -469,7 +469,7 @@ impl GeneratorApp {
                 ui.end_row();
                 ui.label(t.preset);
                 let mut sel = self.preset;
-                egui::ComboBox::from_id_salt("preset")
+                egui::ComboBox::from_id_source("preset")
                     .width(ui.available_width())
                     .selected_text(self.preset.label(t))
                     .show_ui(ui, |ui| {
@@ -793,44 +793,43 @@ fn paint_logo(p: &egui::Painter, r: egui::Rect, bg: Color32, fg: Color32) {
 }
 
 impl eframe::App for GeneratorApp {
-    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        let ctx = ui.ctx().clone();
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         if self.applied_theme != Some(self.theme) {
-            theme::apply(&ctx, self.theme);
+            theme::apply(ctx, self.theme);
             self.applied_theme = Some(self.theme);
         }
         let pal = self.theme.palette();
-        self.poll_generation(&ctx);
+        self.poll_generation(ctx);
 
-        let screen = ui.available_rect_before_wrap();
+        let screen = ctx.screen_rect();
         let narrow = screen.width() < 760.0;
-        let bar = egui::Frame::new().fill(pal.bg).inner_margin(Margin::symmetric(14, 10));
-        egui::Panel::top("header").frame(bar).show(ui, |ui| self.header(ui, &pal, narrow));
+        let bar = egui::Frame::none().fill(pal.bg).inner_margin(Margin::symmetric(14.0, 10.0));
+        egui::TopBottomPanel::top("header").frame(bar).show(ctx, |ui| self.header(ui, &pal, narrow));
 
-        let body = egui::Frame::new().fill(pal.bg).inner_margin(Margin { left: 14, right: 14, top: 0, bottom: 14 });
+        let body = egui::Frame::none().fill(pal.bg).inner_margin(Margin { left: 14.0, right: 14.0, top: 0.0, bottom: 14.0 });
         if narrow {
             let h = (screen.height() * 0.42).clamp(220.0, 520.0);
-            egui::Panel::top("preview_mobile")
+            egui::TopBottomPanel::top("preview_mobile")
                 .frame(body)
-                .exact_size(h)
+                .exact_height(h)
                 .resizable(false)
-                .show(ui, |ui| self.preview_area(ui, &pal));
-            egui::CentralPanel::default().frame(body).show(ui, |ui| {
+                .show(ctx, |ui| self.preview_area(ui, &pal));
+            egui::CentralPanel::default().frame(body).show(ctx, |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| self.controls(ui, &pal));
             });
         } else {
-            egui::Panel::left("controls")
+            egui::SidePanel::left("controls")
                 .frame(body)
                 .resizable(true)
-                .default_size(380.0)
-                .min_size(320.0)
-                .show(ui, |ui| {
+                .default_width(380.0)
+                .min_width(320.0)
+                .show(ctx, |ui| {
                     egui::ScrollArea::vertical().show(ui, |ui| {
                         ui.add_space(2.0);
                         self.controls(ui, &pal);
                     });
                 });
-            egui::CentralPanel::default().frame(body).show(ui, |ui| self.preview_area(ui, &pal));
+            egui::CentralPanel::default().frame(body).show(ctx, |ui| self.preview_area(ui, &pal));
         }
     }
 

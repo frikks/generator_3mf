@@ -1,8 +1,9 @@
-//! Four colour themes: classic (warm paper), light, dark and AMOLED black.
+//! Colour palettes and theme application.
 
-use eframe::egui::{self, Color32, CornerRadius, Stroke, Visuals};
+use eframe::egui::{self, Color32, Rounding, Stroke, Visuals};
+use crate::i18n::Strings;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ThemeKind {
     Classic,
     Light,
@@ -11,7 +12,12 @@ pub enum ThemeKind {
 }
 
 impl ThemeKind {
-    pub const ALL: [ThemeKind; 4] = [ThemeKind::Classic, ThemeKind::Light, ThemeKind::Dark, ThemeKind::Amoled];
+    pub const ALL: [ThemeKind; 4] = [
+        ThemeKind::Classic,
+        ThemeKind::Light,
+        ThemeKind::Dark,
+        ThemeKind::Amoled,
+    ];
 
     pub fn code(self) -> &'static str {
         match self {
@@ -21,10 +27,18 @@ impl ThemeKind {
             ThemeKind::Amoled => "amoled",
         }
     }
+
     pub fn from_code(s: &str) -> Option<Self> {
-        Self::ALL.into_iter().find(|t| t.code() == s)
+        match s {
+            "classic" => Some(ThemeKind::Classic),
+            "light" => Some(ThemeKind::Light),
+            "dark" => Some(ThemeKind::Dark),
+            "amoled" => Some(ThemeKind::Amoled),
+            _ => None,
+        }
     }
-    pub fn label(self, t: &crate::i18n::Strings) -> &'static str {
+
+    pub fn label(self, t: &Strings) -> &'static str {
         match self {
             ThemeKind::Classic => t.theme_classic,
             ThemeKind::Light => t.theme_light,
@@ -32,93 +46,77 @@ impl ThemeKind {
             ThemeKind::Amoled => t.theme_amoled,
         }
     }
+
     pub fn palette(self) -> Palette {
         match self {
             ThemeKind::Classic => Palette {
-                dark: false,
-                bg: hex(0xfdf6ea),
-                panel: hex(0xfffdf7),
-                widget: hex(0xf4ead9),
-                widget_hover: hex(0xeaddc6),
-                border: hex(0xe5d9c3),
-                text: hex(0x3a3127),
-                muted: hex(0x8a7d6a),
-                accent: hex(0xe0662b),
-                accent_hover: hex(0xd96a35),
-                on_accent: Color32::WHITE,
-                warn: hex(0xb07d1a),
-                error: hex(0xb3261e),
-                preview_bg: hex(0xf8f0e0),
-                preview_edge: hex(0x5a4a38),
+                bg: Color32::from_rgb(0x1a, 0x1a, 0x1e),
+                panel: Color32::from_rgb(0x23, 0x23, 0x29),
+                widget: Color32::from_rgb(0x2d, 0x2d, 0x35),
+                border: Color32::from_rgb(0x3a, 0x3a, 0x44),
+                text: Color32::from_rgb(0xf0, 0xf0, 0xf4),
+                muted: Color32::from_rgb(0x9a, 0x9a, 0xa6),
+                accent: Color32::from_rgb(0xe0, 0x66, 0x2b),
+                on_accent: Color32::from_rgb(0xff, 0xff, 0xff),
+                warn: Color32::from_rgb(0xf0, 0xad, 0x4e),
+                error: Color32::from_rgb(0xd9, 0x53, 0x4f),
+                preview_bg: Color32::from_rgb(0x18, 0x18, 0x1b),
+                preview_edge: Color32::from_rgb(0x40, 0x40, 0x48),
             },
             ThemeKind::Light => Palette {
-                dark: false,
-                bg: hex(0xf3f4f6),
-                panel: hex(0xffffff),
-                widget: hex(0xeceef1),
-                widget_hover: hex(0xdfe2e7),
-                border: hex(0xd5d9df),
-                text: hex(0x1f2328),
-                muted: hex(0x6b7280),
-                accent: hex(0xe0662b),
-                accent_hover: hex(0xc9561f),
-                on_accent: Color32::WHITE,
-                warn: hex(0xa16207),
-                error: hex(0xb91c1c),
-                preview_bg: hex(0xf7f8fa),
-                preview_edge: hex(0x30343a),
+                bg: Color32::from_rgb(0xf4, 0xf4, 0xf6),
+                panel: Color32::from_rgb(0xff, 0xff, 0xff),
+                widget: Color32::from_rgb(0xeb, 0xeb, 0xf0),
+                border: Color32::from_rgb(0xd4, 0xd4, 0xdc),
+                text: Color32::from_rgb(0x18, 0x18, 0x1c),
+                muted: Color32::from_rgb(0x6e, 0x6e, 0x7a),
+                accent: Color32::from_rgb(0xd4, 0x55, 0x1a),
+                on_accent: Color32::from_rgb(0xff, 0xff, 0xff),
+                warn: Color32::from_rgb(0xbd, 0x76, 0x00),
+                error: Color32::from_rgb(0xc4, 0x2b, 0x26),
+                preview_bg: Color32::from_rgb(0xe8, 0xe8, 0xed),
+                preview_edge: Color32::from_rgb(0xbc, 0xbc, 0xc6),
             },
             ThemeKind::Dark => Palette {
-                dark: true,
-                bg: hex(0x1b1c1f),
-                panel: hex(0x232529),
-                widget: hex(0x2e3035),
-                widget_hover: hex(0x3a3d43),
-                border: hex(0x3a3d43),
-                text: hex(0xe6e6e6),
-                muted: hex(0x9a9ca2),
-                accent: hex(0xe07a48),
-                accent_hover: hex(0xec8c5c),
-                on_accent: hex(0x1b1c1f),
-                warn: hex(0xd9a441),
-                error: hex(0xef6b5e),
-                preview_bg: hex(0x1f2024),
-                preview_edge: hex(0x0c0c0e),
+                bg: Color32::from_rgb(0x12, 0x12, 0x14),
+                panel: Color32::from_rgb(0x1c, 0x1c, 0x20),
+                widget: Color32::from_rgb(0x26, 0x26, 0x2c),
+                border: Color32::from_rgb(0x32, 0x32, 0x3a),
+                text: Color32::from_rgb(0xee, 0xee, 0xf0),
+                muted: Color32::from_rgb(0x88, 0x88, 0x94),
+                accent: Color32::from_rgb(0xe0, 0x66, 0x2b),
+                on_accent: Color32::from_rgb(0xff, 0xff, 0xff),
+                warn: Color32::from_rgb(0xe0, 0x9e, 0x38),
+                error: Color32::from_rgb(0xd9, 0x4e, 0x4a),
+                preview_bg: Color32::from_rgb(0x10, 0x10, 0x12),
+                preview_edge: Color32::from_rgb(0x38, 0x38, 0x40),
             },
             ThemeKind::Amoled => Palette {
-                dark: true,
-                bg: Color32::BLACK,
-                panel: Color32::BLACK,
-                widget: hex(0x121212),
-                widget_hover: hex(0x1e1e1e),
-                border: hex(0x262626),
-                text: hex(0xeeeeee),
-                muted: hex(0x8c8c8c),
-                accent: hex(0xe07a48),
-                accent_hover: hex(0xf08a58),
-                on_accent: Color32::BLACK,
-                warn: hex(0xd9a441),
-                error: hex(0xff6b5e),
-                preview_bg: Color32::BLACK,
-                preview_edge: Color32::BLACK,
+                bg: Color32::from_rgb(0x00, 0x00, 0x00),
+                panel: Color32::from_rgb(0x0c, 0x0c, 0x0e),
+                widget: Color32::from_rgb(0x18, 0x18, 0x1c),
+                border: Color32::from_rgb(0x28, 0x28, 0x30),
+                text: Color32::from_rgb(0xf2, 0xf2, 0xf4),
+                muted: Color32::from_rgb(0x82, 0x82, 0x8e),
+                accent: Color32::from_rgb(0xe0, 0x66, 0x2b),
+                on_accent: Color32::from_rgb(0xff, 0xff, 0xff),
+                warn: Color32::from_rgb(0xe0, 0x9e, 0x38),
+                error: Color32::from_rgb(0xd9, 0x4e, 0x4a),
+                preview_bg: Color32::from_rgb(0x04, 0x04, 0x06),
+                preview_edge: Color32::from_rgb(0x28, 0x28, 0x30),
             },
         }
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-#[allow(dead_code)]
 pub struct Palette {
-    pub dark: bool,
     pub bg: Color32,
     pub panel: Color32,
     pub widget: Color32,
-    pub widget_hover: Color32,
     pub border: Color32,
     pub text: Color32,
     pub muted: Color32,
     pub accent: Color32,
-    pub accent_hover: Color32,
     pub on_accent: Color32,
     pub warn: Color32,
     pub error: Color32,
@@ -126,50 +124,41 @@ pub struct Palette {
     pub preview_edge: Color32,
 }
 
-const fn hex(v: u32) -> Color32 {
-    Color32::from_rgb((v >> 16) as u8, (v >> 8) as u8, v as u8)
-}
-
 pub fn apply(ctx: &egui::Context, kind: ThemeKind) {
     let p = kind.palette();
-    let mut v = if p.dark { Visuals::dark() } else { Visuals::light() };
-    v.override_text_color = Some(p.text);
-    v.weak_text_color = Some(p.muted);
-    v.hyperlink_color = p.accent;
-    v.faint_bg_color = p.widget;
-    v.extreme_bg_color = p.widget;
-    v.text_edit_bg_color = Some(p.widget);
-    v.code_bg_color = p.widget;
-    v.warn_fg_color = p.warn;
-    v.error_fg_color = p.error;
-    v.window_fill = p.panel;
-    v.window_stroke = Stroke::new(1.0, p.border);
-    v.panel_fill = p.bg;
-    v.selection.bg_fill = p.accent;
-    v.selection.stroke = Stroke::new(1.0, p.on_accent);
-    v.slider_trailing_fill = true;
-    let r = CornerRadius::same(8);
-    let w = &mut v.widgets;
-    w.noninteractive.bg_fill = p.panel;
-    w.noninteractive.weak_bg_fill = p.panel;
-    w.noninteractive.bg_stroke = Stroke::new(1.0, p.border);
-    w.noninteractive.fg_stroke = Stroke::new(1.0, p.text);
-    w.noninteractive.corner_radius = r;
-    for (s, bg) in [(&mut w.inactive, p.widget), (&mut w.hovered, p.widget_hover), (&mut w.active, p.widget_hover), (&mut w.open, p.widget_hover)] {
-        s.bg_fill = bg;
-        s.weak_bg_fill = bg;
-        s.corner_radius = r;
-        s.fg_stroke = Stroke::new(1.0, p.text);
-    }
-    w.inactive.bg_stroke = Stroke::new(1.0, p.border);
-    w.hovered.bg_stroke = Stroke::new(1.0, p.accent);
-    w.active.bg_stroke = Stroke::new(1.5, p.accent);
-    w.open.bg_stroke = Stroke::new(1.0, p.accent);
-    ctx.set_theme(if p.dark { egui::Theme::Dark } else { egui::Theme::Light });
-    ctx.set_visuals_of(if p.dark { egui::Theme::Dark } else { egui::Theme::Light }, v);
-    ctx.style_mut_of(if p.dark { egui::Theme::Dark } else { egui::Theme::Light }, |s| {
-        s.spacing.item_spacing = egui::vec2(8.0, 8.0);
-        s.spacing.button_padding = egui::vec2(10.0, 6.0);
-        s.spacing.interact_size.y = 30.0;
-    });
+    let is_dark = kind != ThemeKind::Light;
+    let mut vis = if is_dark { Visuals::dark() } else { Visuals::light() };
+
+    vis.override_text_color = Some(p.text);
+    vis.window_fill = p.panel;
+    vis.panel_fill = p.panel;
+    vis.window_rounding = Rounding::same(12.0);
+    vis.window_stroke = Stroke::new(1.0, p.border);
+
+    vis.widgets.noninteractive.bg_fill = p.panel;
+    vis.widgets.noninteractive.bg_stroke = Stroke::new(1.0, p.border);
+    vis.widgets.noninteractive.fg_stroke = Stroke::new(1.0, p.muted);
+    vis.widgets.noninteractive.rounding = Rounding::same(8.0);
+
+    vis.widgets.inactive.bg_fill = p.widget;
+    vis.widgets.inactive.bg_stroke = Stroke::new(1.0, p.border);
+    vis.widgets.inactive.fg_stroke = Stroke::new(1.0, p.text);
+    vis.widgets.inactive.rounding = Rounding::same(8.0);
+
+    vis.widgets.hovered.bg_fill = p.widget;
+    vis.widgets.hovered.bg_stroke = Stroke::new(1.2, p.accent);
+    vis.widgets.hovered.fg_stroke = Stroke::new(1.0, p.text);
+    vis.widgets.hovered.rounding = Rounding::same(8.0);
+
+    vis.widgets.active.bg_fill = p.accent;
+    vis.widgets.active.bg_stroke = Stroke::new(1.0, p.accent);
+    vis.widgets.active.fg_stroke = Stroke::new(1.0, p.on_accent);
+    vis.widgets.active.rounding = Rounding::same(8.0);
+
+    vis.widgets.open.bg_fill = p.widget;
+    vis.widgets.open.bg_stroke = Stroke::new(1.0, p.border);
+    vis.widgets.open.fg_stroke = Stroke::new(1.0, p.text);
+    vis.widgets.open.rounding = Rounding::same(8.0);
+
+    ctx.set_visuals(vis);
 }

@@ -49,6 +49,7 @@ pub struct Strings {
     pub baseplate: &'static str,
     pub tool_holder: &'static str,
     pub battery_tray: &'static str,
+    pub lid: &'static str,
     pub units_wide: &'static str,
     pub units_deep: &'static str,
     pub height_u: &'static str,
@@ -58,6 +59,7 @@ pub struct Strings {
     pub plate_features: &'static str,
     pub tool_features: &'static str,
     pub battery_features: &'static str,
+    pub lid_features: &'static str,
     pub comps_across: &'static str,
     pub comps_deep: &'static str,
     pub lip: &'static str,
@@ -124,6 +126,10 @@ pub struct Strings {
     pub battery_holes_deep: &'static str,
     pub battery_hole_depth: &'static str,
     pub battery_hole_dia: &'static str,
+    pub plate_skeleton: &'static str,
+    pub plate_skeleton_hint: &'static str,
+    pub lid_finger_scoop: &'static str,
+    pub lid_finger_scoop_hint: &'static str,
 }
 
 pub static EN: Strings = Strings {
@@ -139,6 +145,7 @@ pub static EN: Strings = Strings {
     baseplate: "Baseplate",
     tool_holder: "Tool holder",
     battery_tray: "Battery tray",
+    lid: "Lid",
     units_wide: "Units wide",
     units_deep: "Units deep",
     height_u: "Height (u)",
@@ -148,6 +155,7 @@ pub static EN: Strings = Strings {
     plate_features: "2 · Baseplate features",
     tool_features: "2 · Tool holder features",
     battery_features: "2 · Battery tray features",
+    lid_features: "2 · Lid features",
     comps_across: "Compartments across",
     comps_deep: "Compartments deep",
     lip: "Stacking lip",
@@ -218,6 +226,10 @@ pub static EN: Strings = Strings {
     battery_holes_deep: "Batteries deep",
     battery_hole_depth: "Pocket depth (mm)",
     battery_hole_dia: "Pocket diameter (mm)",
+    plate_skeleton: "Skeleton (cutouts)",
+    plate_skeleton_hint: "Lightweight baseplate without solid center floors. Saves up to 60% plastic.",
+    lid_finger_scoop: "Finger scoop",
+    lid_finger_scoop_hint: "Central recess for easy sliding and opening.",
 };
 
 pub static RU: Strings = Strings {
@@ -233,6 +245,7 @@ pub static RU: Strings = Strings {
     baseplate: "Основание",
     tool_holder: "Держатель инструмента",
     battery_tray: "Кассета для батареек",
+    lid: "Крышка",
     units_wide: "Ячеек в ширину",
     units_deep: "Ячеек в глубину",
     height_u: "Высота (u)",
@@ -242,6 +255,7 @@ pub static RU: Strings = Strings {
     plate_features: "2 · Параметры основания",
     tool_features: "2 · Параметры держателя",
     battery_features: "2 · Параметры кассеты",
+    lid_features: "2 · Параметры крышки",
     comps_across: "Отсеков в ширину",
     comps_deep: "Отсеков в глубину",
     lip: "Бортик для штабелирования",
@@ -312,4 +326,8 @@ pub static RU: Strings = Strings {
     battery_holes_deep: "Батареек в глубину",
     battery_hole_depth: "Глубина посадки (мм)",
     battery_hole_dia: "Диаметр ячейки (мм)",
+    plate_skeleton: "Скелетное (с вырезами)",
+    plate_skeleton_hint: "Облегчённая решётка без сплошного дна. Экономит до 60% филамента.",
+    lid_finger_scoop: "Выемка под палец",
+    lid_finger_scoop_hint: "Углубление в центре для удобного снятия и сдвигания крышки.",
 };

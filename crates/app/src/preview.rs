@@ -292,6 +292,9 @@ impl Preview {
                 ));
             }
         }
-        ColorImage::new([w, h], out)
+        ColorImage {
+    size: [w, h],
+    pixels: out,
+}
     }
 }
