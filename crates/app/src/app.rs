@@ -10,6 +10,15 @@ use generator_3mf_core::gridfinity::{DIV_RANGE, HEIGHT_RANGE, UNITS_RANGE, WALL_
 #[allow(dead_code)]
 type Job = (Params, Mesh, Vec<Warning>);
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ActiveTab {
+    Bins,
+    Tools,
+    Batteries,
+    Baseplates,
+    Lids,
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Preset {
     Custom,
@@ -52,6 +61,7 @@ impl Preset {
 }
 
 pub struct GeneratorApp {
+    tab: ActiveTab,
     params: Params,
     name: String,
     color: [u8; 3],
@@ -139,6 +149,7 @@ fn color_from_hex(s: &str) -> Option<[u8; 3]> {
 impl GeneratorApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let mut app = Self {
+            tab: ActiveTab::Bins,
             params: Params::default(),
             name: "generator".into(),
             color: DEFAULT_COLOR,
@@ -298,26 +309,6 @@ fn toggle(ui: &mut egui::Ui, pal: &Palette, label: &str, hint: &str, v: &mut boo
     c
 }
 
-fn segmented<T: Copy + PartialEq>(ui: &mut egui::Ui, pal: &Palette, value: &mut T, options: &[(T, &str)]) -> bool {
-    let mut changed = false;
-    ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 4.0;
-        let w = (ui.available_width() - 4.0 * (options.len() as f32 - 1.0)) / options.len() as f32;
-        for (opt, text) in options {
-            let on = *value == *opt;
-            let btn = egui::Button::new(RichText::new(*text).color(if on { pal.on_accent } else { pal.text }))
-                .fill(if on { pal.accent } else { pal.widget })
-                .stroke(Stroke::new(1.0, if on { pal.accent } else { pal.border }))
-                .min_size(egui::vec2(w.max(40.0), 32.0));
-            if ui.add(btn).clicked() && !on {
-                *value = *opt;
-                changed = true;
-            }
-        }
-    });
-    changed
-}
-
 impl GeneratorApp {
     fn header(&mut self, ui: &mut egui::Ui, pal: &Palette, narrow: bool) {
         let t = self.lang.t();
@@ -345,7 +336,7 @@ impl GeneratorApp {
                     }
                 }
                 ui.add_space(6.0);
-                                egui::ComboBox::from_id_salt("theme")
+                egui::ComboBox::from_id_salt("theme")
                     .selected_text(if narrow { self.theme.label(t).to_string() } else { format!("{}: {}", t.theme, self.theme.label(t)) })
                     .show_ui(ui, |ui| {
                         for k in ThemeKind::ALL {
@@ -359,6 +350,38 @@ impl GeneratorApp {
     fn controls(&mut self, ui: &mut egui::Ui, pal: &Palette) {
         let t = self.lang.t();
         let mut changed = false;
+
+        // Вкладки категорий моделей
+        ui.horizontal_wrapped(|ui| {
+            ui.spacing_mut().item_spacing.x = 4.0;
+            let tabs = [
+                (ActiveTab::Bins, t.tab_bins),
+                (ActiveTab::Tools, t.tab_tools),
+                (ActiveTab::Batteries, t.tab_batteries),
+                (ActiveTab::Baseplates, t.tab_baseplates),
+                (ActiveTab::Lids, t.tab_lids),
+            ];
+            for (tab, label) in tabs {
+                let is_active = self.tab == tab;
+                let btn = egui::Button::new(
+                    RichText::new(label)
+                        .strong()
+                        .color(if is_active { pal.on_accent } else { pal.text }),
+                )
+                .fill(if is_active { pal.accent } else { pal.widget })
+                .min_size(egui::vec2(60.0, 30.0));
+
+                if ui.add(btn).clicked() {
+                    self.tab = tab;
+                    match tab {
+                        ActiveTab::Bins => self.params.kind = Kind::Bin,
+                        ActiveTab::Baseplates => self.params.kind = Kind::Baseplate,
+                        _ => {}
+                    }
+                }
+            }
+        });
+        ui.add_space(8.0);
 
         card(ui, pal, t.file, |ui| {
             egui::Grid::new("file_grid").num_columns(2).spacing([10.0, 8.0]).show(ui, |ui| {
@@ -385,53 +408,79 @@ impl GeneratorApp {
         });
         ui.add_space(8.0);
 
-        card(ui, pal, t.part, |ui| {
-            ui.label(RichText::new(t.kind).color(pal.muted));
-            changed |= segmented(ui, pal, &mut self.params.kind, &[(Kind::Bin, t.bin), (Kind::Baseplate, t.baseplate)]);
-            ui.add_space(4.0);
-            changed |= stepper(ui, t.units_wide, Some(t.units_hint), &mut self.params.units_x, UNITS_RANGE);
-            changed |= stepper(ui, t.units_deep, Some(t.units_hint), &mut self.params.units_y, UNITS_RANGE);
-            if self.params.kind == Kind::Bin {
-                changed |= stepper(ui, t.height_u, Some(t.height_hint), &mut self.params.height_u, HEIGHT_RANGE);
-                ui.label(RichText::new(t.height_hint).size(12.5).color(pal.muted));
-            } else {
-                ui.label(RichText::new(t.units_hint).size(12.5).color(pal.muted));
-            }
-        });
-        ui.add_space(8.0);
+        match self.tab {
+            ActiveTab::Bins => {
+                card(ui, pal, t.part, |ui| {
+                    changed |= stepper(ui, t.units_wide, Some(t.units_hint), &mut self.params.units_x, UNITS_RANGE);
+                    changed |= stepper(ui, t.units_deep, Some(t.units_hint), &mut self.params.units_y, UNITS_RANGE);
+                    changed |= stepper(ui, t.height_u, Some(t.height_hint), &mut self.params.height_u, HEIGHT_RANGE);
+                    ui.label(RichText::new(t.height_hint).size(12.5).color(pal.muted));
+                });
+                ui.add_space(8.0);
 
-        if self.params.kind == Kind::Bin {
-            card(ui, pal, t.bin_features, |ui| {
-                changed |= stepper(ui, t.comps_across, None, &mut self.params.div_x, DIV_RANGE);
-                changed |= stepper(ui, t.comps_deep, None, &mut self.params.div_y, DIV_RANGE);
-                ui.add_space(4.0);
-                changed |= toggle(ui, pal, t.lip, t.lip_hint, &mut self.params.lip);
-                changed |= toggle(ui, pal, t.magnets, t.magnets_hint, &mut self.params.magnets);
-                changed |= toggle(ui, pal, t.scoop, t.scoop_hint, &mut self.params.scoop);
-                changed |= toggle(ui, pal, t.label, t.label_hint, &mut self.params.label);
-                changed |= toggle(ui, pal, t.screws, t.screws_hint, &mut self.params.screws);
-                ui.add_space(4.0);
-                ui.horizontal(|ui| {
-                    ui.label(t.wall);
-                    changed |= ui
-                        .add(egui::Slider::new(&mut self.params.wall, WALL_RANGE.0..=WALL_RANGE.1).step_by(0.1).fixed_decimals(1))
-                        .changed();
+                card(ui, pal, t.bin_features, |ui| {
+                    changed |= stepper(ui, t.comps_across, None, &mut self.params.div_x, DIV_RANGE);
+                    changed |= stepper(ui, t.comps_deep, None, &mut self.params.div_y, DIV_RANGE);
+                    ui.add_space(4.0);
+                    changed |= toggle(ui, pal, t.lip, t.lip_hint, &mut self.params.lip);
+                    changed |= toggle(ui, pal, t.magnets, t.magnets_hint, &mut self.params.magnets);
+                    changed |= toggle(ui, pal, t.scoop, t.scoop_hint, &mut self.params.scoop);
+                    changed |= toggle(ui, pal, t.label, t.label_hint, &mut self.params.label);
+                    changed |= toggle(ui, pal, t.screws, t.screws_hint, &mut self.params.screws);
+                    ui.add_space(4.0);
+                    ui.horizontal(|ui| {
+                        ui.label(t.wall);
+                        changed |= ui
+                            .add(egui::Slider::new(&mut self.params.wall, WALL_RANGE.0..=WALL_RANGE.1).step_by(0.1).fixed_decimals(1))
+                            .changed();
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label(t.color);
+                        ui.color_edit_button_srgb(&mut self.color);
+                    });
                 });
-                ui.horizontal(|ui| {
-                    ui.label(t.color);
-                    ui.color_edit_button_srgb(&mut self.color);
+                ui.add_space(8.0);
+            }
+
+            ActiveTab::Baseplates => {
+                card(ui, pal, t.part, |ui| {
+                    changed |= stepper(ui, t.units_wide, Some(t.units_hint), &mut self.params.units_x, UNITS_RANGE);
+                    changed |= stepper(ui, t.units_deep, Some(t.units_hint), &mut self.params.units_y, UNITS_RANGE);
+                    ui.label(RichText::new(t.units_hint).size(12.5).color(pal.muted));
                 });
-            });
-        } else {
-            card(ui, pal, t.plate_features, |ui| {
-                changed |= toggle(ui, pal, t.magnets, t.plate_magnets_hint, &mut self.params.plate_magnets);
-                ui.horizontal(|ui| {
-                    ui.label(t.color);
-                    ui.color_edit_button_srgb(&mut self.color);
+                ui.add_space(8.0);
+
+                card(ui, pal, t.plate_features, |ui| {
+                    changed |= toggle(ui, pal, t.magnets, t.plate_magnets_hint, &mut self.params.plate_magnets);
+                    ui.horizontal(|ui| {
+                        ui.label(t.color);
+                        ui.color_edit_button_srgb(&mut self.color);
+                    });
                 });
-            });
+                ui.add_space(8.0);
+            }
+
+            ActiveTab::Tools => {
+                card(ui, pal, t.tab_tools, |ui| {
+                    ui.label(RichText::new("Раздел в разработке: скоро здесь появятся держатели бит 1/4\" и сверл.").color(pal.muted));
+                });
+                ui.add_space(8.0);
+            }
+
+            ActiveTab::Batteries => {
+                card(ui, pal, t.tab_batteries, |ui| {
+                    ui.label(RichText::new("Раздел в разработке: скоро здесь появятся кассеты для 18650, AA и AAA.").color(pal.muted));
+                });
+                ui.add_space(8.0);
+            }
+
+            ActiveTab::Lids => {
+                card(ui, pal, t.tab_lids, |ui| {
+                    ui.label(RichText::new("Раздел в разработке: скоро здесь появятся сдвижные крышки.").color(pal.muted));
+                });
+                ui.add_space(8.0);
+            }
         }
-        ui.add_space(8.0);
 
         card(ui, pal, t.export, |ui| {
             let ready = self.mesh.is_some() && self.job.is_none() && self.built.as_ref() == Some(&self.params.clamped());

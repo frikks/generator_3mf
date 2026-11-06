@@ -103,6 +103,11 @@ pub struct Strings {
     pub preset_plate4: &'static str,
     pub controls: &'static str,
     pub preview: &'static str,
+    pub tab_bins: &'static str,
+    pub tab_tools: &'static str,
+    pub tab_batteries: &'static str,
+    pub tab_baseplates: &'static str,
+    pub tab_lids: &'static str,
 }
 
 pub static EN: Strings = Strings {
@@ -176,6 +181,11 @@ pub static EN: Strings = Strings {
     preset_plate4: "Baseplate 4×4",
     controls: "Settings",
     preview: "Preview",
+    tab_bins: "Bins",
+    tab_tools: "Tools",
+    tab_batteries: "Batteries",
+    tab_baseplates: "Baseplates",
+    tab_lids: "Lids",
 };
 
 pub static RU: Strings = Strings {
@@ -249,4 +259,9 @@ pub static RU: Strings = Strings {
     preset_plate4: "Основание 4×4",
     controls: "Параметры",
     preview: "Просмотр",
+    tab_bins: "Контейнеры",
+    tab_tools: "Инструмент",
+    tab_batteries: "Батарейки",
+    tab_baseplates: "Основания",
+    tab_lids: "Крышки",
 };
