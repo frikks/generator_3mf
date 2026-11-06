@@ -1,4 +1,6 @@
 pub mod app;
+pub mod i18n;
+pub mod preview;
 pub mod save;
 pub mod theme;
 
@@ -10,16 +12,28 @@ use wasm_bindgen::prelude::*;
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(start)]
 pub fn start_web() -> Result<(), JsValue> {
-    console_error_panic_hook::set_once();
+    use wasm_bindgen::JsCast;
+
     eframe::WebLogger::init(log::LevelFilter::Warn).ok();
 
     let web_options = eframe::WebOptions::default();
 
     wasm_bindgen_futures::spawn_local(async {
+        let document = web_sys::window()
+            .expect("No window")
+            .document()
+            .expect("No document");
+
+        let canvas = document
+            .get_element_by_id("the_canvas_id")
+            .expect("Failed to find canvas with id 'the_canvas_id'")
+            .dyn_into::<web_sys::HtmlCanvasElement>()
+            .expect("Element is not a canvas");
+
         let runner = eframe::WebRunner::new();
         runner
             .start(
-                "the_canvas_id",
+                canvas,
                 web_options,
                 Box::new(|cc| Ok(Box::new(GeneratorApp::new(cc)))),
             )
