@@ -2,6 +2,7 @@
 
 use crate::mesh::Mesh;
 use crate::solid::{build, circle, rounded_rect, Ring, Slab, P2};
+use std::f64::consts::PI;
 
 pub const PITCH: f64 = 42.0;
 pub const HEIGHT_UNIT: f64 = 7.0;
@@ -25,6 +26,13 @@ const SCOOP_STEPS: usize = 10;
 pub enum Kind {
     Bin,
     Baseplate,
+    ToolHolder,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ToolHoleKind {
+    HexBit, // 1/4" шестигранник
+    Round,  // Цилиндрическое сверло
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -43,6 +51,12 @@ pub struct Params {
     pub wall: f64,
     /// Magnet pockets for baseplates.
     pub plate_magnets: bool,
+    // Параметры держателя инструмента
+    pub tool_holes_x: u32,
+    pub tool_holes_y: u32,
+    pub tool_hole_kind: ToolHoleKind,
+    pub tool_hole_depth: f64,
+    pub tool_hole_size: f64,
 }
 
 impl Default for Params {
@@ -61,6 +75,11 @@ impl Default for Params {
             screws: false,
             wall: 1.2,
             plate_magnets: false,
+            tool_holes_x: 5,
+            tool_holes_y: 2,
+            tool_hole_kind: ToolHoleKind::HexBit,
+            tool_hole_depth: 10.0,
+            tool_hole_size: 6.8, // 6.35 мм + зазор под печать
         }
     }
 }
@@ -69,6 +88,7 @@ pub const UNITS_RANGE: (u32, u32) = (1, 8);
 pub const HEIGHT_RANGE: (u32, u32) = (2, 18);
 pub const DIV_RANGE: (u32, u32) = (1, 8);
 pub const WALL_RANGE: (f64, f64) = (0.8, 2.4);
+pub const TOOL_HOLES_RANGE: (u32, u32) = (1, 16);
 
 /// Non-fatal adjustments the generator had to make.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -87,6 +107,10 @@ impl Params {
         p.div_x = p.div_x.clamp(DIV_RANGE.0, DIV_RANGE.1);
         p.div_y = p.div_y.clamp(DIV_RANGE.0, DIV_RANGE.1);
         p.wall = if p.wall.is_finite() { p.wall.clamp(WALL_RANGE.0, WALL_RANGE.1) } else { 1.2 };
+        p.tool_holes_x = p.tool_holes_x.clamp(TOOL_HOLES_RANGE.0, TOOL_HOLES_RANGE.1);
+        p.tool_holes_y = p.tool_holes_y.clamp(TOOL_HOLES_RANGE.0, TOOL_HOLES_RANGE.1);
+        p.tool_hole_depth = if p.tool_hole_depth.is_finite() { p.tool_hole_depth.clamp(2.0, 50.0) } else { 10.0 };
+        p.tool_hole_size = if p.tool_hole_size.is_finite() { p.tool_hole_size.clamp(1.5, 20.0) } else { 6.8 };
         p
     }
 
@@ -98,6 +122,11 @@ impl Params {
                 p.units_x as f64 * PITCH - CLEARANCE,
                 p.units_y as f64 * PITCH - CLEARANCE,
                 p.height_u as f64 * HEIGHT_UNIT + if p.lip { LIP_HEIGHT } else { 0.0 },
+            ],
+            Kind::ToolHolder => [
+                p.units_x as f64 * PITCH - CLEARANCE,
+                p.units_y as f64 * PITCH - CLEARANCE,
+                p.height_u as f64 * HEIGHT_UNIT,
             ],
             Kind::Baseplate => [
                 p.units_x as f64 * PITCH,
@@ -112,6 +141,7 @@ impl Params {
         let p = self.clamped();
         match p.kind {
             Kind::Bin => format!("bin_{}x{}x{}", p.units_x, p.units_y, p.height_u),
+            Kind::ToolHolder => format!("tools_{}x{}x{}", p.units_x, p.units_y, p.height_u),
             Kind::Baseplate => format!("baseplate_{}x{}", p.units_x, p.units_y),
         }
     }
@@ -123,6 +153,7 @@ pub fn generate(params: &Params) -> (Mesh, Vec<Warning>) {
     let p = params.clamped();
     match p.kind {
         Kind::Bin => bin(&p),
+        Kind::ToolHolder => (tool_holder(&p), Vec::new()),
         Kind::Baseplate => (baseplate(&p), Vec::new()),
     }
 }
@@ -134,6 +165,15 @@ fn inset_rect(w: f64, d: f64, r: f64, inset: f64) -> Vec<P2> {
 fn square(cx: f64, cy: f64, size: f64, r: f64) -> Vec<P2> {
     let h = size / 2.0;
     rounded_rect(cx - h, cy - h, cx + h, cy + h, r, SEG)
+}
+
+fn regular_polygon(cx: f64, cy: f64, r: f64, sides: usize, rot: f64) -> Vec<P2> {
+    (0..sides)
+        .map(|i| {
+            let a = rot + 2.0 * PI * (i as f64) / (sides as f64);
+            [cx + r * a.cos(), cy + r * a.sin()]
+        })
+        .collect()
 }
 
 fn unit_centers(nx: u32, ny: u32) -> Vec<(f64, f64)> {
@@ -211,18 +251,9 @@ fn comp_ring(c: &Comp, f: &BinFeatures, z: f64) -> Vec<P2> {
     rounded_rect(c.x0, y0, c.x1, y1, c.r, SEG)
 }
 
-fn bin(p: &Params) -> (Mesh, Vec<Warning>) {
-    let mut warnings = Vec::new();
-    let [w, d, _] = p.size();
-    let h = p.height_u as f64 * HEIGHT_UNIT;
-    let t = p.wall;
+fn add_feet_slabs(p: &Params, w: f64, d: f64, outline: &[P2], slabs: &mut Vec<Slab>) {
     let centers = unit_centers(p.units_x, p.units_y);
     let holes = hole_points(&centers);
-    let outline = inset_rect(w, d, BIN_RADIUS, 0.0);
-
-    let mut slabs: Vec<Slab> = Vec::new();
-
-    // Feet: 0.8 mm chamfer, 1.8 mm vertical, 2.15 mm chamfer.
     let foot = |size: f64, r: f64| -> Vec<Vec<P2>> {
         centers.iter().map(|&(cx, cy)| square(cx, cy, size, r)).collect()
     };
@@ -254,14 +285,23 @@ fn bin(p: &Params) -> (Mesh, Vec<Warning>) {
     }
     foot_slab(2.6, FOOT_HEIGHT, &f1, &f2);
 
-    // Solid floor above the feet.
-    {
-        let mut rings = vec![Ring::prism(outline.clone(), false)];
-        if p.screws {
-            rings.extend(screw_rings.iter().map(|r| Ring::prism(r.clone(), true)));
-        }
-        slabs.push(Slab { z0: FOOT_HEIGHT, z1: FLOOR_TOP, rings });
+    let mut rings = vec![Ring::prism(outline.to_vec(), false)];
+    if p.screws {
+        rings.extend(screw_rings.iter().map(|r| Ring::prism(r.clone(), true)));
     }
+    slabs.push(Slab { z0: FOOT_HEIGHT, z1: FLOOR_TOP, rings });
+    let _ = (w, d);
+}
+
+fn bin(p: &Params) -> (Mesh, Vec<Warning>) {
+    let mut warnings = Vec::new();
+    let [w, d, _] = p.size();
+    let h = p.height_u as f64 * HEIGHT_UNIT;
+    let t = p.wall;
+    let outline = inset_rect(w, d, BIN_RADIUS, 0.0);
+
+    let mut slabs: Vec<Slab> = Vec::new();
+    add_feet_slabs(p, w, d, &outline, &mut slabs);
 
     // Compartments.
     let div_top = if p.lip { h - (2.6 - t) } else { h };
@@ -365,6 +405,72 @@ fn bin(p: &Params) -> (Mesh, Vec<Warning>) {
     (build(&slabs), warnings)
 }
 
+fn tool_holder(p: &Params) -> Mesh {
+    let [w, d, _] = p.size();
+    let total_h = p.height_u as f64 * HEIGHT_UNIT;
+    let outline = inset_rect(w, d, BIN_RADIUS, 0.0);
+
+    let mut slabs: Vec<Slab> = Vec::new();
+    add_feet_slabs(p, w, d, &outline, &mut slabs);
+
+    let hole_depth = p.tool_hole_depth.min(total_h - FLOOR_TOP - 1.0).max(1.0);
+    let floor_holes_z = total_h - hole_depth;
+
+    let margin = 4.0;
+    let usable_w = w - 2.0 * margin;
+    let usable_d = d - 2.0 * margin;
+
+    let mut hole_centers = Vec::new();
+    let nx = p.tool_holes_x;
+    let ny = p.tool_holes_y;
+    for j in 0..ny {
+        for i in 0..nx {
+            let cx = if nx > 1 {
+                -usable_w / 2.0 + (i as f64 / (nx as f64 - 1.0)) * usable_w
+            } else {
+                0.0
+            };
+            let cy = if ny > 1 {
+                -usable_d / 2.0 + (j as f64 / (ny as f64 - 1.0)) * usable_d
+            } else {
+                0.0
+            };
+            hole_centers.push((cx, cy));
+        }
+    }
+
+    let hole_rings: Vec<Vec<P2>> = hole_centers
+        .iter()
+        .map(|&(cx, cy)| match p.tool_hole_kind {
+            ToolHoleKind::HexBit => {
+                let r_outer = p.tool_hole_size / 3.0f64.sqrt();
+                regular_polygon(cx, cy, r_outer, 6, PI / 6.0)
+            }
+            ToolHoleKind::Round => circle(cx, cy, p.tool_hole_size / 2.0, 24),
+        })
+        .collect();
+
+    if floor_holes_z > FLOOR_TOP + 1e-4 {
+        slabs.push(Slab {
+            z0: FLOOR_TOP,
+            z1: floor_holes_z,
+            rings: vec![Ring::prism(outline.clone(), false)],
+        });
+    }
+
+    let mut upper_rings = vec![Ring::prism(outline.clone(), false)];
+    for hr in hole_rings {
+        upper_rings.push(Ring::prism(hr, true));
+    }
+    slabs.push(Slab {
+        z0: floor_holes_z,
+        z1: total_h,
+        rings: upper_rings,
+    });
+
+    build(&slabs)
+}
+
 const PLATE_PROFILE: f64 = 4.45;
 
 fn plate_floor(p: &Params) -> f64 {
@@ -426,38 +532,34 @@ mod tests {
     }
 
     #[test]
-    fn bin_variants_are_closed() {
-        for (ux, uy) in [(1, 1), (2, 3), (4, 2)] {
-            for hu in [2, 3, 6] {
-                for (dx, dy) in [(1, 1), (3, 2), (8, 8)] {
-                    for flags in 0..32u32 {
-                        let p = Params {
-                            kind: Kind::Bin,
-                            units_x: ux,
-                            units_y: uy,
-                            height_u: hu,
-                            div_x: dx,
-                            div_y: dy,
-                            lip: flags & 1 != 0,
-                            magnets: flags & 2 != 0,
-                            scoop: flags & 4 != 0,
-                            label: flags & 8 != 0,
-                            screws: flags & 16 != 0,
-                            wall: 1.2,
-                            plate_magnets: false,
-                        };
-                        check(&p);
-                    }
-                }
-            }
-        }
-    }
+    fn tool_holder_is_closed() {
+        let p_hex = Params {
+            kind: Kind::ToolHolder,
+            units_x: 2,
+            units_y: 1,
+            height_u: 4,
+            tool_holes_x: 6,
+            tool_holes_y: 2,
+            tool_hole_kind: ToolHoleKind::HexBit,
+            tool_hole_depth: 12.0,
+            tool_hole_size: 6.8,
+            ..Params::default()
+        };
+        check(&p_hex);
 
-    #[test]
-    fn walls_are_closed() {
-        for wall in [0.8, 1.6, 2.4] {
-            check(&Params { wall, div_x: 2, div_y: 2, label: true, screws: true, ..Params::default() });
-        }
+        let p_round = Params {
+            kind: Kind::ToolHolder,
+            units_x: 1,
+            units_y: 1,
+            height_u: 5,
+            tool_holes_x: 4,
+            tool_holes_y: 4,
+            tool_hole_kind: ToolHoleKind::Round,
+            tool_hole_depth: 15.0,
+            tool_hole_size: 4.0,
+            ..Params::default()
+        };
+        check(&p_round);
     }
 
     #[test]

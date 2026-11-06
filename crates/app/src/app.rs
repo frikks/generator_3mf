@@ -4,8 +4,8 @@ use crate::i18n::{Lang, Strings};
 use crate::preview::Preview;
 use crate::theme::{self, Palette, ThemeKind};
 use eframe::egui::{self, Color32, CornerRadius, Margin, RichText, Stroke};
+use generator_3mf_core::gridfinity::{ToolHoleKind, DIV_RANGE, HEIGHT_RANGE, TOOL_HOLES_RANGE, UNITS_RANGE, WALL_RANGE};
 use generator_3mf_core::{export, generate, Kind, Mesh, Params, Warning};
-use generator_3mf_core::gridfinity::{DIV_RANGE, HEIGHT_RANGE, UNITS_RANGE, WALL_RANGE};
 
 #[allow(dead_code)]
 type Job = (Params, Mesh, Vec<Warning>);
@@ -89,9 +89,14 @@ fn detect_lang() -> Lang {
 }
 
 fn params_to_string(p: &Params) -> String {
+    let k_str = match p.kind {
+        Kind::Bin => "bin",
+        Kind::ToolHolder => "tool",
+        Kind::Baseplate => "plate",
+    };
     format!(
-        "{};{};{};{};{};{};{};{};{};{};{};{};{}",
-        if p.kind == Kind::Bin { "bin" } else { "plate" },
+        "{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{}",
+        k_str,
         p.units_x,
         p.units_y,
         p.height_u,
@@ -103,20 +108,40 @@ fn params_to_string(p: &Params) -> String {
         p.label as u8,
         p.screws as u8,
         p.wall,
-        p.plate_magnets as u8
+        p.plate_magnets as u8,
+        p.tool_holes_x,
+        p.tool_holes_y,
+        match p.tool_hole_kind { ToolHoleKind::HexBit => 0, ToolHoleKind::Round => 1 },
+        p.tool_hole_depth,
+        p.tool_hole_size,
     )
 }
 
 fn params_from_string(s: &str) -> Option<Params> {
     let f: Vec<&str> = s.split(';').collect();
-    if f.len() != 13 {
+    if f.len() < 13 {
         return None;
     }
     let b = |i: usize| f[i] == "1";
     let n = |i: usize| f[i].parse::<u32>().ok();
+    let kind = match f[0] {
+        "tool" => Kind::ToolHolder,
+        "plate" => Kind::Baseplate,
+        _ => Kind::Bin,
+    };
+    let tool_holes_x = f.get(13).and_then(|s| s.parse().ok()).unwrap_or(5);
+    let tool_holes_y = f.get(14).and_then(|s| s.parse().ok()).unwrap_or(2);
+    let tool_hole_kind = if f.get(15).map(|&s| s == "1").unwrap_or(false) {
+        ToolHoleKind::Round
+    } else {
+        ToolHoleKind::HexBit
+    };
+    let tool_hole_depth = f.get(16).and_then(|s| s.parse().ok()).unwrap_or(10.0);
+    let tool_hole_size = f.get(17).and_then(|s| s.parse().ok()).unwrap_or(6.8);
+
     Some(
         Params {
-            kind: if f[0] == "plate" { Kind::Baseplate } else { Kind::Bin },
+            kind,
             units_x: n(1)?,
             units_y: n(2)?,
             height_u: n(3)?,
@@ -129,6 +154,11 @@ fn params_from_string(s: &str) -> Option<Params> {
             screws: b(10),
             wall: f[11].parse().ok()?,
             plate_magnets: b(12),
+            tool_holes_x,
+            tool_holes_y,
+            tool_hole_kind,
+            tool_hole_depth,
+            tool_hole_size,
         }
         .clamped(),
     )
@@ -180,6 +210,11 @@ impl GeneratorApp {
                 }
             }
             if let Some(p) = s.get_string("params").and_then(|v| params_from_string(&v)) {
+                app.tab = match p.kind {
+                    Kind::Bin => ActiveTab::Bins,
+                    Kind::ToolHolder => ActiveTab::Tools,
+                    Kind::Baseplate => ActiveTab::Baseplates,
+                };
                 app.params = p;
             }
         }
@@ -375,9 +410,11 @@ impl GeneratorApp {
                     self.tab = tab;
                     match tab {
                         ActiveTab::Bins => self.params.kind = Kind::Bin,
+                        ActiveTab::Tools => self.params.kind = Kind::ToolHolder,
                         ActiveTab::Baseplates => self.params.kind = Kind::Baseplate,
                         _ => {}
                     }
+                    changed = true;
                 }
             }
         });
@@ -402,6 +439,7 @@ impl GeneratorApp {
                 if sel != self.preset {
                     self.preset = sel;
                     sel.apply(&mut self.params);
+                    changed = true;
                 }
                 ui.end_row();
             });
@@ -442,6 +480,52 @@ impl GeneratorApp {
                 ui.add_space(8.0);
             }
 
+            ActiveTab::Tools => {
+                card(ui, pal, t.part, |ui| {
+                    changed |= stepper(ui, t.units_wide, Some(t.units_hint), &mut self.params.units_x, UNITS_RANGE);
+                    changed |= stepper(ui, t.units_deep, Some(t.units_hint), &mut self.params.units_y, UNITS_RANGE);
+                    changed |= stepper(ui, t.height_u, Some(t.height_hint), &mut self.params.height_u, (3, 10));
+                    ui.label(RichText::new(t.height_hint).size(12.5).color(pal.muted));
+                });
+                ui.add_space(8.0);
+
+                card(ui, pal, t.tool_features, |ui| {
+                    ui.horizontal(|ui| {
+                        if ui.selectable_label(self.params.tool_hole_kind == ToolHoleKind::HexBit, t.tool_kind_hex).clicked() {
+                            self.params.tool_hole_kind = ToolHoleKind::HexBit;
+                            self.params.tool_hole_size = 6.8;
+                            changed = true;
+                        }
+                        if ui.selectable_label(self.params.tool_hole_kind == ToolHoleKind::Round, t.tool_kind_round).clicked() {
+                            self.params.tool_hole_kind = ToolHoleKind::Round;
+                            self.params.tool_hole_size = 4.0;
+                            changed = true;
+                        }
+                    });
+                    ui.add_space(4.0);
+                    changed |= stepper(ui, t.tool_holes_across, None, &mut self.params.tool_holes_x, (1, 16));
+                    changed |= stepper(ui, t.tool_holes_deep, None, &mut self.params.tool_holes_y, (1, 16));
+                    ui.add_space(4.0);
+                    ui.horizontal(|ui| {
+                        ui.label(t.tool_hole_depth);
+                        changed |= ui.add(egui::Slider::new(&mut self.params.tool_hole_depth, 3.0..=35.0).step_by(0.5).fixed_decimals(1)).changed();
+                    });
+                    ui.horizontal(|ui| {
+                        let r = ui.label(t.tool_hole_size);
+                        r.on_hover_text(t.tool_hole_size_hint);
+                        changed |= ui.add(egui::Slider::new(&mut self.params.tool_hole_size, 2.0..=15.0).step_by(0.1).fixed_decimals(1)).changed();
+                    });
+                    ui.add_space(4.0);
+                    changed |= toggle(ui, pal, t.magnets, t.magnets_hint, &mut self.params.magnets);
+                    changed |= toggle(ui, pal, t.screws, t.screws_hint, &mut self.params.screws);
+                    ui.horizontal(|ui| {
+                        ui.label(t.color);
+                        ui.color_edit_button_srgb(&mut self.color);
+                    });
+                });
+                ui.add_space(8.0);
+            }
+
             ActiveTab::Baseplates => {
                 card(ui, pal, t.part, |ui| {
                     changed |= stepper(ui, t.units_wide, Some(t.units_hint), &mut self.params.units_x, UNITS_RANGE);
@@ -456,13 +540,6 @@ impl GeneratorApp {
                         ui.label(t.color);
                         ui.color_edit_button_srgb(&mut self.color);
                     });
-                });
-                ui.add_space(8.0);
-            }
-
-            ActiveTab::Tools => {
-                card(ui, pal, t.tab_tools, |ui| {
-                    ui.label(RichText::new("Раздел в разработке: скоро здесь появятся держатели бит 1/4\" и сверл.").color(pal.muted));
                 });
                 ui.add_space(8.0);
             }
@@ -528,15 +605,29 @@ impl GeneratorApp {
         let mut lines = vec![
             format!("{}: {:.1} × {:.1} × {:.1} mm", t.size, s[0], s[1], s[2]),
         ];
-        if p.kind == Kind::Bin {
-            lines.push(format!("{}: {} × {}", t.compartments, p.div_x, p.div_y));
+        match p.kind {
+            Kind::Bin => {
+                lines.push(format!("{}: {} × {}", t.compartments, p.div_x, p.div_y));
+            }
+            Kind::ToolHolder => {
+                let k_desc = match p.tool_hole_kind {
+                    ToolHoleKind::HexBit => "1/4\"",
+                    ToolHoleKind::Round => "Ø",
+                };
+                lines.push(format!("Отсеки: {} × {} ({})", p.tool_holes_x, p.tool_holes_y, k_desc));
+            }
+            Kind::Baseplate => {}
         }
         if let Some(m) = &self.mesh {
             lines.push(format!("{}: {}", t.triangles, m.triangles.len()));
             lines.push(format!("{}: {:.1} cm³", t.volume, m.volume() / 1000.0));
         }
         let mut y = rect.top() + 12.0;
-        let kind = if p.kind == Kind::Bin { t.bin } else { t.baseplate };
+        let kind = match p.kind {
+            Kind::Bin => t.bin,
+            Kind::ToolHolder => t.tool_holder,
+            Kind::Baseplate => t.baseplate,
+        };
         painter.text(egui::pos2(rect.left() + 14.0, y), egui::Align2::LEFT_TOP, kind, egui::FontId::proportional(16.0), pal.text);
         y += 22.0;
         for l in &lines {
