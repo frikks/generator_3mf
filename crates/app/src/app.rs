@@ -95,10 +95,11 @@ fn params_to_string(p: &Params) -> String {
         Kind::Bin => "bin",
         Kind::ToolHolder => "tool",
         Kind::BatteryTray => "battery",
+        Kind::Lid => "lid",
         Kind::Baseplate => "plate",
     };
     format!(
-        "{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{}",
+        "{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{}",
         k_str,
         p.units_x,
         p.units_y,
@@ -128,6 +129,8 @@ fn params_to_string(p: &Params) -> String {
         p.battery_holes_y,
         p.battery_hole_depth,
         p.battery_hole_dia,
+        p.plate_skeleton as u8,
+        p.lid_finger_scoop as u8,
     )
 }
 
@@ -136,11 +139,12 @@ fn params_from_string(s: &str) -> Option<Params> {
     if f.len() < 13 {
         return None;
     }
-    let b = |i: usize| f[i] == "1";
+    let b = |i: usize| f.get(i).map(|&v| v == "1").unwrap_or(false);
     let n = |i: usize| f[i].parse::<u32>().ok();
     let kind = match f[0] {
         "tool" => Kind::ToolHolder,
         "battery" => Kind::BatteryTray,
+        "lid" => Kind::Lid,
         "plate" => Kind::Baseplate,
         _ => Kind::Bin,
     };
@@ -165,6 +169,8 @@ fn params_from_string(s: &str) -> Option<Params> {
     let battery_holes_y = f.get(20).and_then(|s| s.parse().ok()).unwrap_or(2);
     let battery_hole_depth = f.get(21).and_then(|s| s.parse().ok()).unwrap_or(25.0);
     let battery_hole_dia = f.get(22).and_then(|s| s.parse().ok()).unwrap_or(15.0);
+    let plate_skeleton = b(23);
+    let lid_finger_scoop = if f.len() > 24 { b(24) } else { true };
 
     Some(
         Params {
@@ -181,6 +187,7 @@ fn params_from_string(s: &str) -> Option<Params> {
             screws: b(10),
             wall: f[11].parse().ok()?,
             plate_magnets: b(12),
+            plate_skeleton,
             tool_holes_x,
             tool_holes_y,
             tool_hole_kind,
@@ -191,6 +198,7 @@ fn params_from_string(s: &str) -> Option<Params> {
             battery_holes_y,
             battery_hole_depth,
             battery_hole_dia,
+            lid_finger_scoop,
         }
         .clamped(),
     )
@@ -246,6 +254,7 @@ impl GeneratorApp {
                     Kind::Bin => ActiveTab::Bins,
                     Kind::ToolHolder => ActiveTab::Tools,
                     Kind::BatteryTray => ActiveTab::Batteries,
+                    Kind::Lid => ActiveTab::Lids,
                     Kind::Baseplate => ActiveTab::Baseplates,
                 };
                 app.params = p;
@@ -419,7 +428,6 @@ impl GeneratorApp {
         let t = self.lang.t();
         let mut changed = false;
 
-        // Вкладки категорий моделей
         ui.horizontal_wrapped(|ui| {
             ui.spacing_mut().item_spacing.x = 4.0;
             let tabs = [
@@ -446,7 +454,7 @@ impl GeneratorApp {
                         ActiveTab::Tools => self.params.kind = Kind::ToolHolder,
                         ActiveTab::Batteries => self.params.kind = Kind::BatteryTray,
                         ActiveTab::Baseplates => self.params.kind = Kind::Baseplate,
-                        _ => {}
+                        ActiveTab::Lids => self.params.kind = Kind::Lid,
                     }
                     changed = true;
                 }
@@ -624,6 +632,7 @@ impl GeneratorApp {
                 ui.add_space(8.0);
 
                 card(ui, pal, t.plate_features, |ui| {
+                    changed |= toggle(ui, pal, t.plate_skeleton, t.plate_skeleton_hint, &mut self.params.plate_skeleton);
                     changed |= toggle(ui, pal, t.magnets, t.plate_magnets_hint, &mut self.params.plate_magnets);
                     ui.horizontal(|ui| {
                         ui.label(t.color);
@@ -634,8 +643,19 @@ impl GeneratorApp {
             }
 
             ActiveTab::Lids => {
-                card(ui, pal, t.tab_lids, |ui| {
-                    ui.label(RichText::new("Раздел в разработке: скоро здесь появятся сдвижные крышки.").color(pal.muted));
+                card(ui, pal, t.part, |ui| {
+                    changed |= stepper(ui, t.units_wide, Some(t.units_hint), &mut self.params.units_x, UNITS_RANGE);
+                    changed |= stepper(ui, t.units_deep, Some(t.units_hint), &mut self.params.units_y, UNITS_RANGE);
+                    ui.label(RichText::new(t.units_hint).size(12.5).color(pal.muted));
+                });
+                ui.add_space(8.0);
+
+                card(ui, pal, t.lid_features, |ui| {
+                    changed |= toggle(ui, pal, t.lid_finger_scoop, t.lid_finger_scoop_hint, &mut self.params.lid_finger_scoop);
+                    ui.horizontal(|ui| {
+                        ui.label(t.color);
+                        ui.color_edit_button_srgb(&mut self.color);
+                    });
                 });
                 ui.add_space(8.0);
             }
@@ -701,7 +721,14 @@ impl GeneratorApp {
             Kind::BatteryTray => {
                 lines.push(format!("{}: {} × {} (Ø{:.1} мм)", t.compartments, p.battery_holes_x, p.battery_holes_y, p.battery_hole_dia));
             }
-            Kind::Baseplate => {}
+            Kind::Lid => {
+                lines.push(format!("Крышка {}×{}", p.units_x, p.units_y));
+            }
+            Kind::Baseplate => {
+                if p.plate_skeleton {
+                    lines.push("Скелетное основание".into());
+                }
+            }
         }
         if let Some(m) = &self.mesh {
             lines.push(format!("{}: {}", t.triangles, m.triangles.len()));
@@ -712,6 +739,7 @@ impl GeneratorApp {
             Kind::Bin => t.bin,
             Kind::ToolHolder => t.tool_holder,
             Kind::BatteryTray => t.battery_tray,
+            Kind::Lid => t.lid,
             Kind::Baseplate => t.baseplate,
         };
         painter.text(egui::pos2(rect.left() + 14.0, y), egui::Align2::LEFT_TOP, kind, egui::FontId::proportional(16.0), pal.text);

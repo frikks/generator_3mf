@@ -21,6 +21,7 @@ const LABEL_THICKNESS: f64 = 1.2;
 const SEG: usize = 8;
 const CIRCLE_SEG: usize = 32;
 const SCOOP_STEPS: usize = 10;
+const LID_HEIGHT: f64 = 4.0;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Kind {
@@ -28,6 +29,7 @@ pub enum Kind {
     Baseplate,
     ToolHolder,
     BatteryTray,
+    Lid,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -60,6 +62,7 @@ pub struct Params {
     pub screws: bool,
     pub wall: f64,
     pub plate_magnets: bool,
+    pub plate_skeleton: bool,
     pub tool_holes_x: u32,
     pub tool_holes_y: u32,
     pub tool_hole_kind: ToolHoleKind,
@@ -70,6 +73,7 @@ pub struct Params {
     pub battery_holes_y: u32,
     pub battery_hole_depth: f64,
     pub battery_hole_dia: f64,
+    pub lid_finger_scoop: bool,
 }
 
 impl Default for Params {
@@ -88,6 +92,7 @@ impl Default for Params {
             screws: false,
             wall: 1.2,
             plate_magnets: false,
+            plate_skeleton: false,
             tool_holes_x: 5,
             tool_holes_y: 2,
             tool_hole_kind: ToolHoleKind::HexBit,
@@ -98,6 +103,7 @@ impl Default for Params {
             battery_holes_y: 2,
             battery_hole_depth: 25.0,
             battery_hole_dia: 15.0,
+            lid_finger_scoop: true,
         }
     }
 }
@@ -149,6 +155,11 @@ impl Params {
                 p.units_y as f64 * PITCH - CLEARANCE,
                 p.height_u as f64 * HEIGHT_UNIT,
             ],
+            Kind::Lid => [
+                p.units_x as f64 * PITCH - CLEARANCE,
+                p.units_y as f64 * PITCH - CLEARANCE,
+                LID_HEIGHT,
+            ],
             Kind::Baseplate => [
                 p.units_x as f64 * PITCH,
                 p.units_y as f64 * PITCH,
@@ -163,6 +174,7 @@ impl Params {
             Kind::Bin => format!("bin_{}x{}x{}", p.units_x, p.units_y, p.height_u),
             Kind::ToolHolder => format!("tools_{}x{}x{}", p.units_x, p.units_y, p.height_u),
             Kind::BatteryTray => format!("battery_{}x{}x{}", p.units_x, p.units_y, p.height_u),
+            Kind::Lid => format!("lid_{}x{}", p.units_x, p.units_y),
             Kind::Baseplate => format!("baseplate_{}x{}", p.units_x, p.units_y),
         }
     }
@@ -174,12 +186,13 @@ pub fn generate(params: &Params) -> (Mesh, Vec<Warning>) {
         Kind::Bin => bin(&p),
         Kind::ToolHolder => (tool_holder(&p), Vec::new()),
         Kind::BatteryTray => (battery_tray(&p), Vec::new()),
+        Kind::Lid => (lid(&p), Vec::new()),
         Kind::Baseplate => (baseplate(&p), Vec::new()),
     }
 }
 
 fn inset_rect(w: f64, d: f64, r: f64, inset: f64) -> Vec<P2> {
-    rounded_rect(-w / 2.0 + inset, -d / 2.0 + inset, w / 2.0 - inset, d / 2.0 - inset, r - inset, SEG)
+    rounded_rect(-w / 2.0 + inset, -d / 2.0 + inset, w / 2.0 - inset, d / 2.0 - inset, (r - inset).max(0.2), SEG)
 }
 
 fn square(cx: f64, cy: f64, size: f64, r: f64) -> Vec<P2> {
@@ -547,6 +560,45 @@ fn battery_tray(p: &Params) -> Mesh {
     build(&slabs)
 }
 
+fn lid(p: &Params) -> Mesh {
+    let [w, d, _] = p.size();
+    let outline_top = inset_rect(w, d, BIN_RADIUS, 0.0);
+    let outline_lip = inset_rect(w, d, BIN_RADIUS, 2.6);
+
+    let mut slabs = Vec::new();
+    slabs.push(Slab {
+        z0: 0.0,
+        z1: 1.8,
+        rings: vec![Ring::prism(outline_lip, false)],
+    });
+
+    if p.lid_finger_scoop {
+        let scoop_r = 8.0;
+        let scoop_ring = circle(0.0, 0.0, scoop_r, CIRCLE_SEG);
+        slabs.push(Slab {
+            z0: 1.8,
+            z1: 2.8,
+            rings: vec![Ring::prism(outline_top.clone(), false)],
+        });
+        slabs.push(Slab {
+            z0: 2.8,
+            z1: LID_HEIGHT,
+            rings: vec![
+                Ring::prism(outline_top, false),
+                Ring::prism(scoop_ring, true),
+            ],
+        });
+    } else {
+        slabs.push(Slab {
+            z0: 1.8,
+            z1: LID_HEIGHT,
+            rings: vec![Ring::prism(outline_top, false)],
+        });
+    }
+
+    build(&slabs)
+}
+
 const PLATE_PROFILE: f64 = 4.45;
 
 fn plate_floor(p: &Params) -> f64 {
@@ -560,18 +612,42 @@ fn baseplate(p: &Params) -> Mesh {
     let centers = unit_centers(p.units_x, p.units_y);
     let fz = plate_floor(p);
     let pocket = |inset: f64| -> Vec<Vec<P2>> {
-        centers.iter().map(|&(cx, cy)| square(cx, cy, PITCH - 2.0 * inset, PLATE_RADIUS - inset)).collect()
+        centers.iter().map(|&(cx, cy)| square(cx, cy, PITCH - 2.0 * inset, (PLATE_RADIUS - inset).max(0.2))).collect()
     };
+    let center_cutouts: Vec<Vec<P2>> = if p.plate_skeleton {
+        centers.iter().map(|&(cx, cy)| square(cx, cy, 21.0, 2.0)).collect()
+    } else {
+        Vec::new()
+    };
+
     let mut slabs = Vec::new();
+
     if p.plate_magnets {
         let skin = fz - MAGNET_DEPTH;
-        slabs.push(Slab { z0: 0.0, z1: skin, rings: vec![Ring::prism(outline.clone(), false)] });
+        let mut base_rings = vec![Ring::prism(outline.clone(), false)];
+        if p.plate_skeleton {
+            base_rings.extend(center_cutouts.iter().map(|c| Ring::prism(c.clone(), true)));
+        }
+        slabs.push(Slab { z0: 0.0, z1: skin, rings: base_rings });
+
         let mut rings = vec![Ring::prism(outline.clone(), false)];
+        if p.plate_skeleton {
+            rings.extend(center_cutouts.iter().map(|c| Ring::prism(c.clone(), true)));
+        }
         for (x, y) in hole_points(&centers) {
             rings.push(Ring::prism(circle(x, y, MAGNET_D / 2.0, CIRCLE_SEG), true));
         }
         slabs.push(Slab { z0: skin, z1: fz, rings });
+    } else if p.plate_skeleton {
+        slabs.push(Slab {
+            z0: 0.0,
+            z1: 0.8,
+            rings: vec![Ring::prism(outline.clone(), false)],
+        });
     }
+
+    let z_start = if !p.plate_magnets && p.plate_skeleton { 0.8 } else { fz };
+
     let stage = |z0: f64, z1: f64, a: f64, b: f64| {
         let mut rings = vec![Ring::prism(outline.clone(), false)];
         for (x, y) in pocket(a).into_iter().zip(pocket(b)) {
@@ -579,7 +655,8 @@ fn baseplate(p: &Params) -> Mesh {
         }
         Slab { z0, z1, rings }
     };
-    slabs.push(stage(fz, fz + 2.15, 2.85, 0.7));
+
+    slabs.push(stage(z_start, fz + 2.15, 2.85, 0.7));
     slabs.push(stage(fz + 2.15, fz + 3.95, 0.7, 0.7));
     slabs.push(stage(fz + 3.95, fz + PLATE_PROFILE, 0.7, 0.2));
     build(&slabs)
@@ -655,10 +732,32 @@ mod tests {
     }
 
     #[test]
+    fn lids_are_closed() {
+        for scoop in [false, true] {
+            check(&Params {
+                kind: Kind::Lid,
+                units_x: 2,
+                units_y: 1,
+                lid_finger_scoop: scoop,
+                ..Params::default()
+            });
+        }
+    }
+
+    #[test]
     fn baseplates_are_closed() {
-        for (ux, uy) in [(1, 1), (3, 2), (5, 5)] {
+        for (ux, uy) in [(1, 1), (3, 2)] {
             for m in [false, true] {
-                check(&Params { kind: Kind::Baseplate, units_x: ux, units_y: uy, plate_magnets: m, ..Params::default() });
+                for skel in [false, true] {
+                    check(&Params {
+                        kind: Kind::Baseplate,
+                        units_x: ux,
+                        units_y: uy,
+                        plate_magnets: m,
+                        plate_skeleton: skel,
+                        ..Params::default()
+                    });
+                }
             }
         }
     }

@@ -1,12 +1,24 @@
 [workspace]
-resolver = "2"
-members = ["crates/core", "crates/app", "xtask"]
+members = [
+    "crates/core",
+    "crates/app",
+    "xtask",
+]
 
 [workspace.package]
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 license = "MIT"
+authors = ["frikks"]
+repository = "https://github.com/frikks/generator_3mf"
 
 [profile.release]
-lto = true
+opt-level = 3
+lto = "thin"
 codegen-units = 1
+panic = "abort"
+strip = true
+
+[profile.wasm]
+inherits = "release"
+opt-level = "s"
