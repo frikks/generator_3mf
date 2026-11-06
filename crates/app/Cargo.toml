@@ -29,6 +29,7 @@ rfd = "0.15"
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
+console_error_panic_hook = "0.1.7"
 js-sys = "0.3"
 log = "0.4"
 web-sys = { version = "0.3", features = [
@@ -37,6 +38,7 @@ web-sys = { version = "0.3", features = [
     "Document",
     "Element",
     "HtmlAnchorElement",
+    "HtmlCanvasElement",
     "Url",
     "Window",
 ] }
@@ -46,3 +48,4 @@ web-sys = { version = "0.3", features = [
 winit = { version = "0.30", features = ["android-game-activity"] }
 android_logger = "0.14"
 log = "0.4"
+
