@@ -21,11 +21,11 @@ eframe = { version = "0.30", default-features = false, features = [
 image = { version = "0.25", default-features = false, features = ["png"] }
 sys-locale = "0.3"
 
-# Зависимость rfd только для десктопных ОС (Windows, Linux, macOS)
+# Desktop (Windows, Linux, macOS)
 [target.'cfg(not(any(target_arch = "wasm32", target_os = "android")))'.dependencies]
 rfd = "0.15"
 
-# Зависимости для WebAssembly
+# WebAssembly
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
@@ -41,6 +41,8 @@ web-sys = { version = "0.3", features = [
     "Window",
 ] }
 
-# Зависимости для Android (активация бэкенда game-activity для winit/android-activity)
+# Android
 [target.'cfg(target_os = "android")'.dependencies]
 winit = { version = "0.30", features = ["android-game-activity"] }
+android_logger = "0.14"
+log = "0.4"
