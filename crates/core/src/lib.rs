@@ -1,4 +1,4 @@
-//! Core geometry for Gridfinity bins and baseplates.
+//! Core geometry for bins and baseplates.
 //!
 //! Everything here is plain Rust without platform dependencies, so the same
 //! code runs on desktop, Android and WebAssembly.

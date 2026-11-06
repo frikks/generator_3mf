@@ -1,6 +1,6 @@
 [package]
 name = "generator_3mf"
-description = "Gridfinity bin and baseplate generator with 3MF and STL export"
+description = "ГЕНЕратор: bin and baseplate generator with 3MF and STL export"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -48,7 +48,7 @@ min_sdk_version = 24
 target_sdk_version = 34
 
 [package.metadata.android.application]
-label = "Gridfinity 3MF"
+label = "ГЕНЕратор 3MF"
 theme = "@android:style/Theme.DeviceDefault.NoActionBar"
 
 [package.metadata.android.application.activity]

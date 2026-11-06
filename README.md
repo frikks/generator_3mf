@@ -1,7 +1,7 @@
 # generator_3mf
 
-Gridfinity bin and baseplate generator written in pure Rust, with 3MF and STL export.
-Генератор контейнеров и оснований Gridfinity на чистом Rust с экспортом в 3MF и STL.
+Bin and baseplate generator written in pure Rust, with 3MF and STL export.
+ГЕНЕратор контейнеров и оснований на чистом Rust с экспортом в 3MF и STL.
 
 One code base, three builds / Один код — три сборки:
 
@@ -30,7 +30,7 @@ Download them from [Releases](../../releases).
 
 ## Geometry / Геометрия
 
-Dimensions follow the open Gridfinity standard: 42 mm grid, 7 mm height units, 0.5 mm clearance,
+Dimensions follow the open 42 mm standard: 42 mm grid, 7 mm height units, 0.5 mm clearance,
 foot profile 0.8 + 1.8 + 2.15 mm with 45° chamfers, magnets 13 mm from the cell centre.
 Parts print flat without supports.
 

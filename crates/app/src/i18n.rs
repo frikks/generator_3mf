@@ -106,7 +106,7 @@ pub struct Strings {
 }
 
 pub static EN: Strings = Strings {
-    app_title: "Gridfinity Generator",
+    app_title: "ГЕНЕратор",
     subtitle: "Bins and baseplates on the open 42 mm standard",
     file: "File",
     name: "Name",
@@ -119,7 +119,7 @@ pub static EN: Strings = Strings {
     units_wide: "Units wide",
     units_deep: "Units deep",
     height_u: "Height (u)",
-    units_hint: "Gridfinity units of 42 mm. A 4×4 baseplate is 168 mm square.",
+    units_hint: "Units of 42 mm. A 4×4 baseplate is 168 mm square.",
     height_hint: "Height units of 7 mm, base included, lip extra. 3u = small parts, 6u = the workhorse, 9u+ = tall stock.",
     bin_features: "2 · Bin features",
     plate_features: "2 · Baseplate features",
@@ -179,7 +179,7 @@ pub static EN: Strings = Strings {
 };
 
 pub static RU: Strings = Strings {
-    app_title: "Генератор Gridfinity",
+    app_title: "ГЕНЕратор",
     subtitle: "Контейнеры и основания по открытому стандарту 42 мм",
     file: "Файл",
     name: "Имя",
@@ -192,7 +192,7 @@ pub static RU: Strings = Strings {
     units_wide: "Ячеек в ширину",
     units_deep: "Ячеек в глубину",
     height_u: "Высота (u)",
-    units_hint: "Ячейки Gridfinity по 42 мм. Основание 4×4 — квадрат 168 мм.",
+    units_hint: "Ячейки по 42 мм. Основание 4×4 — квадрат 168 мм.",
     height_hint: "Единицы высоты по 7 мм, с учётом дна, без бортика. 3u — мелочь, 6u — универсальный, 9u+ — высокие предметы.",
     bin_features: "2 · Параметры контейнера",
     plate_features: "2 · Параметры основания",

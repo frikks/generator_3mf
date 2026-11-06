@@ -1,6 +1,6 @@
 [package]
 name = "generator_3mf_core"
-description = "Gridfinity bin and baseplate geometry with 3MF and STL export"
+description = "ГЕНЕратор: bin and baseplate geometry with 3MF and STL export"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

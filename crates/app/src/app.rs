@@ -140,7 +140,7 @@ impl GeneratorApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let mut app = Self {
             params: Params::default(),
-            name: "gridfinity".into(),
+            name: "generator".into(),
             color: DEFAULT_COLOR,
             lang: detect_lang(),
             theme: ThemeKind::Classic,
@@ -182,7 +182,7 @@ impl GeneratorApp {
             .chars()
             .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' { c } else { '_' })
             .collect();
-        let base = if clean.is_empty() { "gridfinity".to_string() } else { clean };
+        let base = if clean.is_empty() { "generator".to_string() } else { clean };
         format!("{base}_{}", self.params.slug())
     }
 

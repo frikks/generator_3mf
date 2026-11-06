@@ -1,4 +1,4 @@
-//! Gridfinity parts on the open 42 mm × 7 mm standard.
+//! Parts on the open 42 mm × 7 mm standard.
 
 use crate::mesh::Mesh;
 use crate::solid::{build, circle, rounded_rect, Ring, Slab, P2};
