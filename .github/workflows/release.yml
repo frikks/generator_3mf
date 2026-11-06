@@ -26,7 +26,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo build --release -p generator_3mf_app --bin generator_3mf_app
+      - run: cargo build --release -p generator_3mf_app --bin generator_3mf
       - shell: bash
         run: |
           VERSION=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
