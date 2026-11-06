@@ -7,6 +7,10 @@ authors.workspace = true
 repository.workspace = true
 description = "Cross-platform GUI for ГЕНЕратор"
 
+[lib]
+name = "generator_3mf"
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
 generator_3mf_core = { path = "../core" }
 eframe = { version = "0.30", default-features = false, features = ["default_fonts", "glow", "persistence"] }
@@ -16,8 +20,19 @@ sys-locale = "0.3"
 rfd = "0.15"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
-web-sys = { version = "0.3", features = ["Blob", "BlobPropertyBag", "Document", "Element", "HtmlAnchorElement", "Url", "Window"] }
+js-sys = "0.3"
+log = "0.4"
+web-sys = { version = "0.3", features = [
+    "Blob",
+    "BlobPropertyBag",
+    "Document",
+    "Element",
+    "HtmlAnchorElement",
+    "Url",
+    "Window",
+] }
 
 [[bin]]
 name = "generator_3mf"

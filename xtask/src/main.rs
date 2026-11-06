@@ -33,7 +33,7 @@ fn web() {
     let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
     run(Command::new(&cargo)
         .current_dir(&root)
-        .args(["build", "-p", "generator_3mf", "--lib", "--release", "--target", "wasm32-unknown-unknown"]));
+        .args(["build", "-p", "generator_3mf_app", "--lib", "--release", "--target", "wasm32-unknown-unknown"]));
     let out = root.join("target/web");
     run(Command::new("wasm-bindgen")
         .current_dir(&root)

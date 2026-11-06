@@ -942,8 +942,11 @@ version = "0.2.0"
 dependencies = [
  "eframe",
  "generator_3mf_core",
+ "js-sys",
+ "log",
  "rfd",
  "sys-locale",
+ "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
 ]
