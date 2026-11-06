@@ -1,7 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use eframe::egui;
-use generator_3mf_app::GeneratorApp;
+use generator_3mf::GeneratorApp;
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result<()> {

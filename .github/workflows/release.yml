@@ -3,6 +3,8 @@ name: Build and release
 on:
   push:
     branches: [main]
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 permissions:
@@ -47,7 +49,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@v2
         with:
-          tool: wasm-bindgen@0.2.130
+          tool: wasm-bindgen@0.2.100
       - run: cargo run -p xtask -- web
       - uses: actions/upload-artifact@v4
         with:
@@ -82,7 +84,7 @@ jobs:
           export ANDROID_SDK_ROOT="$ANDROID_HOME"
           export CARGO_APK_RELEASE_KEYSTORE="$HOME/.android/debug.keystore"
           export CARGO_APK_RELEASE_KEYSTORE_PASSWORD=android
-          cargo apk build -p generator_3mf --release --lib
+          cargo apk build -p generator_3mf_app --release --lib
           VERSION=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
           mkdir -p out
           cp target/release/apk/generator_3mf.apk "out/generator_3mf-${VERSION}-android.apk"
