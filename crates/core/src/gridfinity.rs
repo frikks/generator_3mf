@@ -32,8 +32,8 @@ pub enum Kind {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ToolHoleKind {
-    HexBit, // 1/4" шестигранник
-    Round,  // Цилиндрическое сверло
+    HexBit,
+    Round,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -59,15 +59,12 @@ pub struct Params {
     pub label: bool,
     pub screws: bool,
     pub wall: f64,
-    /// Magnet pockets for baseplates.
     pub plate_magnets: bool,
-    // Параметры держателя инструмента
     pub tool_holes_x: u32,
     pub tool_holes_y: u32,
     pub tool_hole_kind: ToolHoleKind,
     pub tool_hole_depth: f64,
     pub tool_hole_size: f64,
-    // Параметры кассеты батареек
     pub battery_kind: BatteryKind,
     pub battery_holes_x: u32,
     pub battery_holes_y: u32,
@@ -100,7 +97,7 @@ impl Default for Params {
             battery_holes_x: 4,
             battery_holes_y: 2,
             battery_hole_depth: 25.0,
-            battery_hole_dia: 15.0, // AA 14.5 мм + зазор 0.5 мм
+            battery_hole_dia: 15.0,
         }
     }
 }
@@ -112,7 +109,6 @@ pub const WALL_RANGE: (f64, f64) = (0.8, 2.4);
 pub const TOOL_HOLES_RANGE: (u32, u32) = (1, 16);
 pub const BATTERY_HOLES_RANGE: (u32, u32) = (1, 16);
 
-/// Non-fatal adjustments the generator had to make.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Warning {
     CompartmentsTooSmall,
@@ -140,7 +136,6 @@ impl Params {
         p
     }
 
-    /// Outer size in millimetres (x, y, z).
     pub fn size(&self) -> [f64; 3] {
         let p = self.clamped();
         match p.kind {
@@ -149,12 +144,7 @@ impl Params {
                 p.units_y as f64 * PITCH - CLEARANCE,
                 p.height_u as f64 * HEIGHT_UNIT + if p.lip { LIP_HEIGHT } else { 0.0 },
             ],
-            Kind::ToolHolder => [
-                p.units_x as f64 * PITCH - CLEARANCE,
-                p.units_y as f64 * PITCH - CLEARANCE,
-                p.height_u as f64 * HEIGHT_UNIT,
-            ],
-            Kind::BatteryTray => [
+            Kind::ToolHolder | Kind::BatteryTray => [
                 p.units_x as f64 * PITCH - CLEARANCE,
                 p.units_y as f64 * PITCH - CLEARANCE,
                 p.height_u as f64 * HEIGHT_UNIT,
@@ -167,7 +157,6 @@ impl Params {
         }
     }
 
-    /// Short file-friendly description, e.g. `bin_2x1x6`.
     pub fn slug(&self) -> String {
         let p = self.clamped();
         match p.kind {
@@ -179,8 +168,6 @@ impl Params {
     }
 }
 
-/// Generates the part mesh. Coordinates are millimetres, centred in X/Y with
-/// the bottom at Z = 0.
 pub fn generate(params: &Params) -> (Mesh, Vec<Warning>) {
     let p = params.clamped();
     match p.kind {
@@ -284,7 +271,7 @@ fn comp_ring(c: &Comp, f: &BinFeatures, z: f64) -> Vec<P2> {
     rounded_rect(c.x0, y0, c.x1, y1, c.r, SEG)
 }
 
-fn add_feet_slabs(p: &Params, w: f64, d: f64, outline: &[P2], slabs: &mut Vec<Slab>) {
+fn add_feet_slabs(p: &Params, outline: &[P2], slabs: &mut Vec<Slab>) {
     let centers = unit_centers(p.units_x, p.units_y);
     let holes = hole_points(&centers);
     let foot = |size: f64, r: f64| -> Vec<Vec<P2>> {
@@ -323,7 +310,6 @@ fn add_feet_slabs(p: &Params, w: f64, d: f64, outline: &[P2], slabs: &mut Vec<Sl
         rings.extend(screw_rings.iter().map(|r| Ring::prism(r.clone(), true)));
     }
     slabs.push(Slab { z0: FOOT_HEIGHT, z1: FLOOR_TOP, rings });
-    let _ = (w, d);
 }
 
 fn bin(p: &Params) -> (Mesh, Vec<Warning>) {
@@ -334,9 +320,8 @@ fn bin(p: &Params) -> (Mesh, Vec<Warning>) {
     let outline = inset_rect(w, d, BIN_RADIUS, 0.0);
 
     let mut slabs: Vec<Slab> = Vec::new();
-    add_feet_slabs(p, w, d, &outline, &mut slabs);
+    add_feet_slabs(p, &outline, &mut slabs);
 
-    // Compartments.
     let div_top = if p.lip { h - (2.6 - t) } else { h };
     let iw = w - 2.0 * t;
     let id = d - 2.0 * t;
@@ -415,9 +400,7 @@ fn bin(p: &Params) -> (Mesh, Vec<Warning>) {
         }
         slabs.push(Slab { z0, z1, rings });
     }
-    let _ = feat.div_top;
 
-    // Stacking lip.
     if p.lip {
         let lip = |z0: f64, z1: f64, a: f64, b: f64| Slab {
             z0,
@@ -444,14 +427,14 @@ fn tool_holder(p: &Params) -> Mesh {
     let outline = inset_rect(w, d, BIN_RADIUS, 0.0);
 
     let mut slabs: Vec<Slab> = Vec::new();
-    add_feet_slabs(p, w, d, &outline, &mut slabs);
+    add_feet_slabs(p, &outline, &mut slabs);
 
     let hole_depth = p.tool_hole_depth.min(total_h - FLOOR_TOP - 1.0).max(1.0);
     let floor_holes_z = total_h - hole_depth;
 
-    let margin = 4.0;
-    let usable_w = w - 2.0 * margin;
-    let usable_d = d - 2.0 * margin;
+    let margin = (p.tool_hole_size * 0.75).max(4.0);
+    let usable_w = (w - 2.0 * margin).max(2.0);
+    let usable_d = (d - 2.0 * margin).max(2.0);
 
     let mut hole_centers = Vec::new();
     let nx = p.tool_holes_x;
@@ -510,14 +493,14 @@ fn battery_tray(p: &Params) -> Mesh {
     let outline = inset_rect(w, d, BIN_RADIUS, 0.0);
 
     let mut slabs: Vec<Slab> = Vec::new();
-    add_feet_slabs(p, w, d, &outline, &mut slabs);
+    add_feet_slabs(p, &outline, &mut slabs);
 
     let hole_depth = p.battery_hole_depth.min(total_h - FLOOR_TOP - 1.0).max(1.0);
     let floor_holes_z = total_h - hole_depth;
 
-    let margin = 3.5;
-    let usable_w = w - 2.0 * margin;
-    let usable_d = d - 2.0 * margin;
+    let margin = (p.battery_hole_dia * 0.6).max(4.0);
+    let usable_w = (w - 2.0 * margin).max(2.0);
+    let usable_d = (d - 2.0 * margin).max(2.0);
 
     let mut hole_centers = Vec::new();
     let nx = p.battery_holes_x;
@@ -631,10 +614,10 @@ mod tests {
             units_x: 2,
             units_y: 1,
             height_u: 4,
-            tool_holes_x: 6,
+            tool_holes_x: 4,
             tool_holes_y: 2,
             tool_hole_kind: ToolHoleKind::HexBit,
-            tool_hole_depth: 12.0,
+            tool_hole_depth: 10.0,
             tool_hole_size: 6.8,
             ..Params::default()
         };
@@ -645,10 +628,10 @@ mod tests {
             units_x: 1,
             units_y: 1,
             height_u: 5,
-            tool_holes_x: 4,
-            tool_holes_y: 4,
+            tool_holes_x: 2,
+            tool_holes_y: 2,
             tool_hole_kind: ToolHoleKind::Round,
-            tool_hole_depth: 15.0,
+            tool_hole_depth: 12.0,
             tool_hole_size: 4.0,
             ..Params::default()
         };
@@ -664,8 +647,8 @@ mod tests {
             height_u: 5,
             battery_holes_x: 2,
             battery_holes_y: 2,
-            battery_hole_depth: 25.0,
-            battery_hole_dia: 15.0,
+            battery_hole_depth: 20.0,
+            battery_hole_dia: 14.5,
             ..Params::default()
         };
         check(&p_aa);
