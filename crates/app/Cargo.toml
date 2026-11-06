@@ -18,3 +18,7 @@ rfd = "0.15"
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen-futures = "0.4"
 web-sys = { version = "0.3", features = ["Blob", "BlobPropertyBag", "Document", "Element", "HtmlAnchorElement", "Url", "Window"] }
+
+[[bin]]
+name = "generator_3mf"
+path = "src/main.rs"
