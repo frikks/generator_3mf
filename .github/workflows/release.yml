@@ -93,14 +93,14 @@ jobs:
             -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
       - name: Build APK
         run: |
-          export ANDROID_NDK_ROOT="$ANDROID_NDK_LATEST_HOME"
-          export ANDROID_SDK_ROOT="$ANDROID_HOME"
-          export CARGO_APK_RELEASE_KEYSTORE="$HOME/.android/debug.keystore"
-          export CARGO_APK_RELEASE_KEYSTORE_PASSWORD=android
-          cargo apk build -p generator_3mf_app --release --lib
-          VERSION=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
-          mkdir -p out
-          cp target/release/apk/generator_3mf.apk "out/generator_3mf-${VERSION}-android.apk"
+            export ANDROID_NDK_ROOT="$ANDROID_NDK_LATEST_HOME"
+            export ANDROID_SDK_ROOT="$ANDROID_HOME"
+            export CARGO_APK_RELEASE_KEYSTORE="$HOME/.android/debug.keystore"
+            export CARGO_APK_RELEASE_KEYSTORE_PASSWORD=android
+            cargo apk build -p generator_3mf_app --release
+            VERSION=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
+            mkdir -p out
+            cp target/release/apk/*.apk "out/generator_3mf-${VERSION}-android.apk"
       - uses: actions/upload-artifact@v4
         with:
           name: android
