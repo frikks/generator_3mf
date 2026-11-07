@@ -3,18 +3,13 @@ name: Build and release
 on:
   push:
     branches: [main]
-    tags:
-      - 'v*'
-  workflow_dispatch:
+    tags: ['v*']
+  pull_request:
 
 permissions:
   contents: write
   pages: write
   id-token: write
-
-concurrency:
-  group: 'pages'
-  cancel-in-progress: false
 
 env:
   CARGO_TERM_COLOR: always
@@ -26,7 +21,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo test --release -p generator_3mf_core
+      - name: Run tests
+        run: cargo test --workspace
 
   windows:
     runs-on: windows-latest
@@ -34,12 +30,16 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo build --release -p generator_3mf_app --bin generator_3mf
-      - shell: bash
+      - name: Build Windows binary
         run: |
-          VERSION=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
-          mkdir -p out
-          cp target/release/generator_3mf.exe "out/generator_3mf-${VERSION}-windows-x64.exe"
+          cargo build --release --example desktop || cargo build -p generator_3mf_app --release
+          $VERSION = (Get-Content Cargo.toml | Select-String -Pattern '^version' | Select-Object -First 1).Line.Split('"')[1]
+          New-Item -ItemType Directory -Force -Path out
+          if (Test-Path target/release/generator_3mf.exe) {
+            Copy-Item target/release/generator_3mf.exe "out/generator_3mf-$VERSION-windows-x86_64.exe"
+          } elseif (Test-Path target/release/generator_3mf_app.exe) {
+            Copy-Item target/release/generator_3mf_app.exe "out/generator_3mf-$VERSION-windows-x86_64.exe"
+          }
       - uses: actions/upload-artifact@v4
         with:
           name: windows
@@ -53,21 +53,18 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: wasm-bindgen@0.2.130
-      - run: cargo run -p xtask -- web
-      - name: Prepare Pages directory
-        run: |
-          mkdir -p pages
-          cp dist/*.html pages/index.html
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: pages/
+      - name: Install wasm-bindgen-cli
+        run: cargo install wasm-bindgen-cli --version 0.2.100 || cargo install wasm-bindgen-cli
+      - name: Build Web via xtask
+        run: cargo run -p xtask -- web
       - uses: actions/upload-artifact@v4
         with:
           name: web
-          path: dist/*.html
+          path: dist/*
+      - uses: actions/upload-pages-artifact@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          path: dist/
 
   android:
     runs-on: ubuntu-latest
@@ -75,7 +72,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-linux-android,armv7-linux-androideabi
+          targets: aarch64-linux-android
       - uses: Swatinem/rust-cache@v2
       - uses: actions/setup-java@v4
         with:
@@ -85,7 +82,7 @@ jobs:
         run: cargo install cargo-apk --locked
       - name: Android SDK packages
         run: |
-          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-30" "platforms;android-34" "build-tools;34.0.0" > /dev/null
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-34" "build-tools;34.0.0" > /dev/null
       - name: Signing key
         run: |
           mkdir -p ~/.android
@@ -93,14 +90,14 @@ jobs:
             -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
       - name: Build APK
         run: |
-            export ANDROID_NDK_ROOT="$ANDROID_NDK_LATEST_HOME"
-            export ANDROID_SDK_ROOT="$ANDROID_HOME"
-            export CARGO_APK_RELEASE_KEYSTORE="$HOME/.android/debug.keystore"
-            export CARGO_APK_RELEASE_KEYSTORE_PASSWORD=android
-            cargo apk build -p generator_3mf_app --release
-            VERSION=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
-            mkdir -p out
-            cp target/release/apk/*.apk "out/generator_3mf-${VERSION}-android.apk"
+          export ANDROID_NDK_ROOT="$ANDROID_NDK_LATEST_HOME"
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          export CARGO_APK_RELEASE_KEYSTORE="$HOME/.android/debug.keystore"
+          export CARGO_APK_RELEASE_KEYSTORE_PASSWORD=android
+          cargo apk build -p generator_3mf_app --release
+          VERSION=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
+          mkdir -p out
+          cp target/release/apk/*.apk "out/generator_3mf-${VERSION}-android.apk"
       - uses: actions/upload-artifact@v4
         with:
           name: android
@@ -108,32 +105,11 @@ jobs:
 
   deploy-pages:
     needs: web
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
+      - id: deployment
         uses: actions/deploy-pages@v4
-
-  release:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: [test, windows, web, android]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          merge-multiple: true
-      - name: Version
-        id: v
-        run: echo "version=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)" >> "$GITHUB_OUTPUT"
-      - uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ steps.v.outputs.version }}
-          name: generator_3mf ${{ steps.v.outputs.version }}
-          target_commitish: ${{ github.sha }}
-          body_path: CHANGELOG.md
-          files: artifacts/*
