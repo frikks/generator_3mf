@@ -64,8 +64,10 @@ impl Default for WebHandle {
 }
 
 #[cfg(target_os = "android")]
-#[no_mangle]
+#[android_activity::main(flavor = "native_activity")]
 fn android_main(app: android_activity::AndroidApp) {
+    use std::fs::OpenOptions;
+
     android_logger::init_once(
         android_logger::Config::default()
             .with_max_level(log::LevelFilter::Info)
