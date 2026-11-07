@@ -7,86 +7,79 @@ pub mod theme;
 pub use app::GeneratorApp;
 
 #[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
+use eframe::wasm_bindgen::{self, prelude::*};
 
 #[cfg(target_arch = "wasm32")]
-#[wasm_bindgen(start)]
-pub fn start_web() -> Result<(), JsValue> {
-    use wasm_bindgen::JsCast;
+#[wasm_bindgen]
+pub struct WebHandle {
+    runner: eframe::WebRunner,
+}
 
-    std::panic::set_hook(Box::new(console_error_panic_hook::hook));
-    eframe::WebLogger::init(log::LevelFilter::Debug).ok();
-
-    let web_options = eframe::WebOptions::default();
-
-    wasm_bindgen_futures::spawn_local(async {
-        let window = web_sys::window().expect("No window found");
-        let document = window.document().expect("No document found");
-
-        let loading_ids = ["loading", "loading_text", "loader", "loading-screen"];
-        for id in &loading_ids {
-            if let Some(elem) = document.get_element_by_id(id) {
-                elem.remove();
-            }
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+impl WebHandle {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self {
+            runner: eframe::WebRunner::new(),
         }
-        if let Ok(Some(elem)) = document.query_selector(".loading") {
-            elem.remove();
-        }
-        if let Ok(Some(elem)) = document.query_selector("#loading") {
-            elem.remove();
-        }
+    }
 
-        let canvas = document
-            .get_element_by_id("the_canvas_id")
-            .or_else(|| document.get_element_by_id("canvas"))
-            .or_else(|| document.query_selector("canvas").ok().flatten())
-            .expect("Could not find any <canvas> element on page")
-            .dyn_into::<web_sys::HtmlCanvasElement>()
-            .expect("Target element is not a canvas");
+    #[wasm_bindgen]
+    pub async fn start(&self, canvas_id: &str) -> Result<(), JsValue> {
+        console_error_panic_hook::set_once();
 
-        let _ = canvas.style().set_property("pointer-events", "auto");
-        let _ = canvas.focus();
-
-        let runner = eframe::WebRunner::new();
-        if let Err(err) = runner
+        self.runner
             .start(
-                canvas,
-                web_options,
-                Box::new(|cc| Ok(Box::new(GeneratorApp::new(cc)))),
+                canvas_id,
+                eframe::WebOptions::default(),
+                Box::new(|cc| {
+                    cc.egui_ctx.set_visuals(egui::Visuals::dark());
+                    Ok(Box::new(GeneratorApp::new(cc)))
+                }),
             )
             .await
-        {
-            log::error!("Failed to start eframe runner: {err:?}");
-        }
-    });
+            .map_err(|err| JsValue::from_str(&format!("{err:?}")))?;
 
-    Ok(())
+        Ok(())
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl Default for WebHandle {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[cfg(target_os = "android")]
 #[no_mangle]
 fn android_main(app: winit::platform::android::activity::AndroidApp) {
-    use winit::platform::android::EventLoopBuilderExtAndroid;
-
     android_logger::init_once(
-        android_logger::Config::default().with_max_level(log::LevelFilter::Debug),
+        android_logger::Config::default()
+            .with_max_level(log::LevelFilter::Info)
+            .with_tag("generator_3mf"),
     );
-
-    std::panic::set_hook(Box::new(|panic_info| {
-        log::error!("CRITICAL PANIC: {panic_info:?}");
-    }));
+    log::info!("Starting Android generator_3mf...");
 
     let mut options = eframe::NativeOptions::default();
-    options.event_loop_builder = Some(Box::new(move |builder| {
-        builder.with_android_app(app);
-    }));
+    options.android_app = Some(app);
 
-    let _ = eframe::run_native(
-        "Generator 3MF",
+    let res = eframe::run_native(
+        "ГЕНЕРАТОР 3MF",
         options,
         Box::new(|cc| {
-            cc.egui_ctx.set_visuals(eframe::egui::Visuals::dark());
+            cc.egui_ctx.set_visuals(egui::Visuals::dark());
             Ok(Box::new(GeneratorApp::new(cc)))
         }),
     );
+
+    if let Err(e) = res {
+        log::error!("eframe run_native terminated with error: {e:?}");
+    }
+
+    // Блокируем завершение функции android_main, чтобы не дропался AndroidApp
+    loop {
+        std::thread::park();
+    }
 }
