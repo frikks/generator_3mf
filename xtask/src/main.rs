@@ -28,6 +28,20 @@ fn run(cmd: &mut Command) {
     }
 }
 
+fn get_version() -> String {
+    let root = root();
+    let cargo_toml = std::fs::read_to_string(root.join("Cargo.toml")).expect("read root Cargo.toml");
+    for line in cargo_toml.lines() {
+        let line = line.trim();
+        if line.starts_with("version") {
+            if let Some(v) = line.split('"').nth(1) {
+                return v.to_string();
+            }
+        }
+    }
+    "0.1.0".to_string()
+}
+
 fn web() {
     let root = root();
     let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
@@ -53,12 +67,12 @@ fn web() {
         .collect::<Vec<_>>()
         .join("\n");
     let template = std::fs::read_to_string(root.join("web/index.html")).expect("read template");
-    let version = env!("CARGO_PKG_VERSION");
+    let version = get_version();
     let boot = format!(
         "{js}\nconst __b64 = \"{}\";\nconst __bin = Uint8Array.from(atob(__b64), c => c.charCodeAt(0));\nawait __wbg_init({{ module_or_path: __bin }});\n",
         base64(&wasm)
     );
-    let html = template.replace("{{VERSION}}", version).replace("{{SCRIPT}}", &boot.replace("</script", "<\\/script"));
+    let html = template.replace("{{VERSION}}", &version).replace("{{SCRIPT}}", &boot.replace("</script", "<\\/script"));
     let dist = root.join("dist");
     std::fs::create_dir_all(&dist).unwrap();
     let path = dist.join(format!("generator_3mf-{version}.html"));

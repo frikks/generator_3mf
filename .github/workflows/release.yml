@@ -118,7 +118,7 @@ jobs:
           mkdir -p release-assets
           cp -r all-artifacts/windows/* release-assets/ || true
           cp -r all-artifacts/android/* release-assets/ || true
-          cd all-artifacts/web && zip -r ../../release-assets/generator_3mf-0.2.1-web.zip . && cd ../.. || true
+          cp -r all-artifacts/web/* release-assets/ || true
 
       - name: Create GitHub Release and Upload Assets
         uses: softprops/action-gh-release@v2
