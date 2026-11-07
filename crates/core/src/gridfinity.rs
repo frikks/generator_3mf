@@ -245,6 +245,7 @@ struct Comp {
 
 struct BinFeatures {
     floor: f64,
+    #[allow(dead_code)]
     div_top: f64,
     scoop_r: f64,
     label_len: f64,

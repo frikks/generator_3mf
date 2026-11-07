@@ -5,7 +5,7 @@ use crate::preview::Preview;
 use crate::theme::{self, Palette, ThemeKind};
 use eframe::egui::{self, Color32, Margin, RichText, Rounding, Stroke};
 use generator_3mf_core::gridfinity::{
-    BatteryKind, ToolHoleKind, BATTERY_HOLES_RANGE, DIV_RANGE, HEIGHT_RANGE, TOOL_HOLES_RANGE, UNITS_RANGE, WALL_RANGE,
+    BatteryKind, ToolHoleKind, DIV_RANGE, HEIGHT_RANGE, UNITS_RANGE, WALL_RANGE,
 };
 use generator_3mf_core::{export, generate, Kind, Mesh, Params, Warning};
 
@@ -342,7 +342,7 @@ impl GeneratorApp {
 fn card<R>(ui: &mut egui::Ui, pal: &Palette, title: &str, add: impl FnOnce(&mut egui::Ui) -> R) -> R {
     egui::Frame::none()
         .fill(pal.panel)
-        .stroke(Stroke::new(1.0, pal.border))
+        .stroke(Stroke::new(1.0_f32, pal.border))
         .rounding(Rounding::same(12.0))
         .inner_margin(Margin::same(14.0))
         .show(ui, |ui| {
@@ -413,7 +413,7 @@ impl GeneratorApp {
                     }
                 }
                 ui.add_space(6.0);
-                egui::ComboBox::from_id_source("theme")
+                egui::ComboBox::from_id_salt("theme")
                     .selected_text(if narrow { self.theme.label(t).to_string() } else { format!("{}: {}", t.theme, self.theme.label(t)) })
                     .show_ui(ui, |ui| {
                         for k in ThemeKind::ALL {
@@ -469,7 +469,7 @@ impl GeneratorApp {
                 ui.end_row();
                 ui.label(t.preset);
                 let mut sel = self.preset;
-                egui::ComboBox::from_id_source("preset")
+                egui::ComboBox::from_id_salt("preset")
                     .width(ui.available_width())
                     .selected_text(self.preset.label(t))
                     .show_ui(ui, |ui| {
