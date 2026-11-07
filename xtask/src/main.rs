@@ -84,10 +84,13 @@ fn web() {
         .join("\n");
     let template = std::fs::read_to_string(root.join("web/index.html")).expect("read template");
     let version = get_version();
+    
+    // Убран await перед start(), чтобы не блокировать удаление оверлея бесконечным циклом рендеринга
     let boot = format!(
-        "{js}\nconst __b64 = \"{}\";\nconst __bin = Uint8Array.from(atob(__b64), c => c.charCodeAt(0));\nawait __wbg_init({{ module_or_path: __bin }});\nnew WebHandle().start(\"app\");\n",
+        "{js}\nconst __b64 = \"{}\";\nconst __bin = Uint8Array.from(atob(__b64), c => c.charCodeAt(0));\ntry {{\n    await __wbg_init({{ module_or_path: __bin }});\n    new WebHandle().start(\"app\");\n    document.getElementById('loading')?.remove();\n}} catch (e) {{\n    console.error(\"Failed to start web app:\", e);\n    document.getElementById('loading').innerText = \"Error: \" + e.message;\n}}\n",
         base64(&wasm)
     );
+    
     let html = template.replace("{{VERSION}}", &version).replace("{{SCRIPT}}", &boot.replace("</script", "<\\/script"));
     let dist = root.join("dist");
     std::fs::create_dir_all(&dist).unwrap();
