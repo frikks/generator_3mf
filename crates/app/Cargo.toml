@@ -19,18 +19,6 @@ label = "ГЕНЕРАТОР 3MF"
 build_targets = ["aarch64-linux-android"]
 icon = "@android:drawable/sym_def_app_icon"
 
-[package.metadata.android.application]
-has_code = false
-
-[[package.metadata.android.application.activity]]
-name = "android.app.NativeActivity"
-label = "ГЕНЕРАТОР 3MF"
-config_changes = "orientation|screenSize|screenLayout|keyboardHidden"
-
-[[package.metadata.android.application.activity.meta_data]]
-name = "android.app.lib_name"
-value = "generator_3mf"
-
 [dependencies]
 generator_3mf_core = { path = "../core" }
 eframe = { version = "0.30", default-features = false, features = [
@@ -65,5 +53,4 @@ web-sys = { version = "0.3", features = [
 
 [target.'cfg(target_os = "android")'.dependencies]
 android_logger = "0.14"
-android-activity = { version = "0.6", features = ["native-activity"] }
 winit = { version = "0.30", default-features = false, features = ["android-native-activity"] }

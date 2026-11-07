@@ -42,10 +42,10 @@ impl WebHandle {
 
         self.runner
             .start(
-                &canvas,
+                canvas,
                 eframe::WebOptions::default(),
                 Box::new(|cc| {
-                    cc.egui_ctx.set_visuals(egui::Visuals::dark());
+                    cc.egui_ctx.set_visuals(eframe::egui::Visuals::dark());
                     Ok(Box::new(GeneratorApp::new(cc)))
                 }),
             )
@@ -64,16 +64,14 @@ impl Default for WebHandle {
 }
 
 #[cfg(target_os = "android")]
-#[android_activity::main(flavor = "native_activity")]
-fn android_main(app: android_activity::AndroidApp) {
-    use std::fs::OpenOptions;
-
+#[no_mangle]
+fn android_main(app: winit::platform::android::activity::AndroidApp) {
     android_logger::init_once(
         android_logger::Config::default()
             .with_max_level(log::LevelFilter::Info)
             .with_tag("generator_3mf"),
     );
-    log::info!("=== ANDROID MAIN STARTED ===");
+    log::info!("Starting Android generator_3mf...");
 
     let mut options = eframe::NativeOptions::default();
     options.android_app = Some(app);
@@ -82,7 +80,7 @@ fn android_main(app: android_activity::AndroidApp) {
         "ГЕНЕРАТОР 3MF",
         options,
         Box::new(|cc| {
-            cc.egui_ctx.set_visuals(egui::Visuals::dark());
+            cc.egui_ctx.set_visuals(eframe::egui::Visuals::dark());
             Ok(Box::new(GeneratorApp::new(cc)))
         }),
     );
