@@ -30,7 +30,6 @@ log = "0.4"
 serde = { version = "1.0", features = ["derive"] }
 sys-locale = "0.3"
 
-# Файловый проводник только для десктопа (Windows / Linux / macOS)
 [target.'cfg(not(any(target_arch = "wasm32", target_os = "android")))'.dependencies]
 rfd = "0.15"
 
@@ -53,4 +52,5 @@ web-sys = { version = "0.3", features = [
 
 [target.'cfg(target_os = "android")'.dependencies]
 android_logger = "0.14"
-winit = { version = "0.30", features = ["android-native-activity"] }
+android-activity = { version = "0.6", features = ["native-activity"] }
+winit = { version = "0.30", default-features = false, features = ["android-native-activity"] }
