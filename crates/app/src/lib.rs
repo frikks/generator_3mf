@@ -14,7 +14,6 @@ use wasm_bindgen::prelude::*;
 pub fn start_web() -> Result<(), JsValue> {
     use wasm_bindgen::JsCast;
 
-    // Включаем читаемые сообщения об ошибках в консоли браузера
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));
     eframe::WebLogger::init(log::LevelFilter::Debug).ok();
 
@@ -24,7 +23,6 @@ pub fn start_web() -> Result<(), JsValue> {
         let window = web_sys::window().expect("No window found");
         let document = window.document().expect("No document found");
 
-        // Удаляем любые экраны и тексты загрузки, которые перекрывают экран
         let loading_ids = ["loading", "loading_text", "loader", "loading-screen"];
         for id in &loading_ids {
             if let Some(elem) = document.get_element_by_id(id) {
@@ -38,7 +36,6 @@ pub fn start_web() -> Result<(), JsValue> {
             elem.remove();
         }
 
-        // Находим холст
         let canvas = document
             .get_element_by_id("the_canvas_id")
             .or_else(|| document.get_element_by_id("canvas"))
@@ -47,7 +44,6 @@ pub fn start_web() -> Result<(), JsValue> {
             .dyn_into::<web_sys::HtmlCanvasElement>()
             .expect("Target element is not a canvas");
 
-        // Разрешаем прием событий мыши холстом и передаем ему фокус
         let _ = canvas.style().set_property("pointer-events", "auto");
         let _ = canvas.focus();
 
@@ -73,8 +69,12 @@ fn android_main(app: winit::platform::android::activity::AndroidApp) {
     use winit::platform::android::EventLoopBuilderExtAndroid;
 
     android_logger::init_once(
-        android_logger::Config::default().with_max_level(log::LevelFilter::Info),
+        android_logger::Config::default().with_max_level(log::LevelFilter::Debug),
     );
+
+    std::panic::set_hook(Box::new(|panic_info| {
+        log::error!("CRITICAL PANIC: {panic_info:?}");
+    }));
 
     let mut options = eframe::NativeOptions::default();
     options.event_loop_builder = Some(Box::new(move |builder| {
@@ -84,6 +84,9 @@ fn android_main(app: winit::platform::android::activity::AndroidApp) {
     let _ = eframe::run_native(
         "Generator 3MF",
         options,
-        Box::new(|cc| Ok(Box::new(GeneratorApp::new(cc)))),
+        Box::new(|cc| {
+            cc.egui_ctx.set_visuals(eframe::egui::Visuals::dark());
+            Ok(Box::new(GeneratorApp::new(cc)))
+        }),
     );
 }

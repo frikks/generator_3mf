@@ -96,8 +96,8 @@ jobs:
           export CARGO_APK_RELEASE_KEYSTORE_PASSWORD=android
           cargo apk build -p generator_3mf_app --lib --release
           VERSION=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
-          mkdir -p out
-          cp target/release/apk/*.apk "out/generator_3mf-${VERSION}-android.apk"
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          cp target/release/apk/*.apk "$GITHUB_WORKSPACE/out/generator_3mf-${VERSION}-android.apk"
       - uses: actions/upload-artifact@v4
         with:
           name: android

@@ -4,7 +4,7 @@ version = "0.2.0"
 edition = "2021"
 
 [lib]
-name = "generator_3mf_app"
+name = "generator_3mf"
 crate-type = ["cdylib", "rlib"]
 path = "src/lib.rs"
 

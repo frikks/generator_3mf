@@ -794,6 +794,12 @@ fn paint_logo(p: &egui::Painter, r: egui::Rect, bg: Color32, fg: Color32) {
 
 impl eframe::App for GeneratorApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        #[cfg(target_os = "android")]
+        egui::TopBottomPanel::top("android_safe_area_padding")
+            .exact_height(42.0)
+            .show_separator_line(false)
+            .frame(egui::Frame::none().fill(ctx.style().visuals.panel_fill))
+            .show(ctx, |_ui| {});
         if self.applied_theme != Some(self.theme) {
             theme::apply(ctx, self.theme);
             self.applied_theme = Some(self.theme);
