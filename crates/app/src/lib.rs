@@ -71,7 +71,7 @@ fn android_main(app: android_activity::AndroidApp) {
             .with_max_level(log::LevelFilter::Info)
             .with_tag("generator_3mf"),
     );
-    log::info!("Starting Android generator_3mf via android-activity native entry...");
+    log::info!("=== ANDROID MAIN STARTED ===");
 
     let mut options = eframe::NativeOptions::default();
     options.android_app = Some(app);
