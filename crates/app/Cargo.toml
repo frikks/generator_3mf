@@ -17,7 +17,8 @@ package = "com.frikks.generator_3mf"
 apk_name = "generator_3mf"
 label = "ГЕНЕРАТОР 3MF"
 build_targets = ["aarch64-linux-android"]
-icon = "@android:drawable/sym_def_app_icon"
+icon = "@mipmap/ic_launcher"
+res = "res"
 
 [dependencies]
 generator_3mf_core = { path = "../core" }
