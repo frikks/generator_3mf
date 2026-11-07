@@ -47,7 +47,6 @@ fn get_version() -> String {
             }
         }
     }
-    // Fallback search if workspace.package wasn't found
     for line in cargo_toml.lines() {
         let line = line.trim();
         if line.starts_with("version") {
@@ -86,7 +85,7 @@ fn web() {
     let template = std::fs::read_to_string(root.join("web/index.html")).expect("read template");
     let version = get_version();
     let boot = format!(
-        "{js}\nconst __b64 = \"{}\";\nconst __bin = Uint8Array.from(atob(__b64), c => c.charCodeAt(0));\nawait __wbg_init({{ module_or_path: __bin }});\n",
+        "{js}\nconst __b64 = \"{}\";\nconst __bin = Uint8Array.from(atob(__b64), c => c.charCodeAt(0));\nawait __wbg_init({{ module_or_path: __bin }});\nnew WebHandle().start(\"app\");\n",
         base64(&wasm)
     );
     let html = template.replace("{{VERSION}}", &version).replace("{{SCRIPT}}", &boot.replace("</script", "<\\/script"));
