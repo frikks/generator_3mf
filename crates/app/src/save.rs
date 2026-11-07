@@ -1,60 +1,75 @@
-/// Сохранение файла в браузере (скачивание через виртуальный blob)
-#[cfg(target_arch = "wasm32")]
-pub fn save(data: &[u8], filename: &str, mime: &str) -> Result<Option<String>, String> {
-    use wasm_bindgen::JsCast;
+pub fn save_file(data: &[u8], default_name: &str, _ext: &str) -> Result<Option<String>, String> {
+    #[cfg(target_arch = "wasm32")]
+    {
+        use eframe::wasm_bindgen::JsCast;
+        let window = web_sys::window().ok_or_else(|| "No window found".to_string())?;
+        let document = window.document().ok_or_else(|| "No document found".to_string())?;
 
-    let window = web_sys::window().ok_or_else(|| "Window not available".to_string())?;
-    let document = window
-        .document()
-        .ok_or_else(|| "Document not available".to_string())?;
+        let array = js_sys::Array::new();
+        let uint8_array = js_sys::Uint8Array::new_with_length(data.len() as u32);
+        uint8_array.copy_from(data);
+        array.push(&uint8_array.buffer());
 
-    let uint8_array = js_sys::Uint8Array::new_with_length(data.len() as u32);
-    uint8_array.copy_from(data);
+        let property_bag = web_sys::BlobPropertyBag::new();
+        property_bag.set_type("application/vnd.ms-package.3dmanufacturing-3dmodel+xml");
 
-    let array = js_sys::Array::new();
-    array.push(&uint8_array.buffer());
+        let blob = web_sys::Blob::new_with_u8_array_sequence_and_options(&array, &property_bag)
+            .map_err(|e| format!("{e:?}"))?;
+        let url = web_sys::Url::create_object_url_with_blob(&blob)
+            .map_err(|e| format!("{e:?}"))?;
 
-    let blob_props = web_sys::BlobPropertyBag::new();
-    blob_props.set_type(mime);
+        let element = document.create_element("a").map_err(|e| format!("{e:?}"))?;
+        let anchor = element
+            .dyn_into::<web_sys::HtmlAnchorElement>()
+            .map_err(|_| "Failed to cast element to HtmlAnchorElement".to_string())?;
 
-    let blob = web_sys::Blob::new_with_u8_array_sequence_and_options(&array, &blob_props)
-        .map_err(|e| format!("Failed to create blob: {e:?}"))?;
+        anchor.set_href(&url);
+        anchor.set_download(default_name);
+        anchor.click();
 
-    let url = web_sys::Url::create_object_url_with_blob(&blob)
-        .map_err(|e| format!("Failed to create object url: {e:?}"))?;
+        let _ = web_sys::Url::revoke_object_url(&url);
+        Ok(Some(default_name.to_string()))
+    }
 
-    let anchor = document
-        .create_element("a")
-        .map_err(|e| format!("Failed to create anchor: {e:?}"))?
-        .dyn_into::<web_sys::HtmlAnchorElement>()
-        .map_err(|e| format!("Failed to cast anchor: {e:?}"))?;
+    #[cfg(target_os = "android")]
+    {
+        let download_dir = std::path::PathBuf::from("/sdcard/Download");
+        let target_path = download_dir.join(default_name);
 
-    anchor.set_href(&url);
-    anchor.set_download(filename);
-    anchor.click();
+        match std::fs::write(&target_path, data) {
+            Ok(_) => {
+                let path_str = target_path.display().to_string();
+                log::info!("Successfully saved file to: {path_str}");
+                Ok(Some(path_str))
+            }
+            Err(e) => {
+                let err_msg = format!("Failed to save file to {}: {e}", target_path.display());
+                log::error!("{err_msg}");
+                Err(err_msg)
+            }
+        }
+    }
 
-    let _ = web_sys::Url::revoke_object_url(&url);
-    Ok(Some(filename.to_string()))
-}
+    #[cfg(not(any(target_arch = "wasm32", target_os = "android")))]
+    {
+        let mut dialog = rfd::FileDialog::new().set_file_name(default_name);
+        if !_ext.is_empty() {
+            dialog = dialog.add_filter("3MF Model", &[_ext]);
+        }
 
-/// Сохранение на настольных ОС (Windows / Linux / macOS через диалоговое окно)
-#[cfg(not(any(target_arch = "wasm32", target_os = "android")))]
-pub fn save(data: &[u8], filename: &str, _mime: &str) -> Result<Option<String>, String> {
-    let path = rfd::FileDialog::new()
-        .set_file_name(filename)
-        .save_file();
-
-    if let Some(path) = path {
-        std::fs::write(&path, data).map_err(|e| format!("Failed to write file: {e}"))?;
-        Ok(Some(path.display().to_string()))
-    } else {
-        Ok(None)
+        if let Some(path) = dialog.save_file() {
+            std::fs::write(&path, data).map_err(|e| e.to_string())?;
+            Ok(Some(path.display().to_string()))
+        } else {
+            Ok(None)
+        }
     }
 }
 
-/// Заглушка для Android
-#[cfg(target_os = "android")]
-pub fn save(_data: &[u8], filename: &str, _mime: &str) -> Result<Option<String>, String> {
-    log::info!("Save requested on Android for {}", filename);
-    Ok(Some(filename.to_string()))
+pub fn save(data: &[u8], default_name: &str, ext: &str) -> Result<Option<String>, String> {
+    save_file(data, default_name, ext)
+}
+
+pub fn save_file_dialog(default_name: &str, data: &[u8]) -> Result<Option<String>, String> {
+    save_file(data, default_name, "3mf")
 }

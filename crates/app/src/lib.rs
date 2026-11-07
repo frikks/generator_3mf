@@ -28,10 +28,21 @@ impl WebHandle {
     #[wasm_bindgen]
     pub async fn start(&self, canvas_id: &str) -> Result<(), JsValue> {
         console_error_panic_hook::set_once();
+        let _ = console_log::init_with_level(log::Level::Info);
+
+        let document = web_sys::window()
+            .and_then(|win| win.document())
+            .ok_or_else(|| JsValue::from_str("No document found"))?;
+
+        let canvas = document
+            .get_element_by_id(canvas_id)
+            .ok_or_else(|| JsValue::from_str(&format!("Canvas '{canvas_id}' not found")))?
+            .dyn_into::<web_sys::HtmlCanvasElement>()
+            .map_err(|_| JsValue::from_str("Element is not an HtmlCanvasElement"))?;
 
         self.runner
             .start(
-                canvas_id,
+                &canvas,
                 eframe::WebOptions::default(),
                 Box::new(|cc| {
                     cc.egui_ctx.set_visuals(egui::Visuals::dark());
@@ -65,21 +76,14 @@ fn android_main(app: winit::platform::android::activity::AndroidApp) {
     let mut options = eframe::NativeOptions::default();
     options.android_app = Some(app);
 
-    let res = eframe::run_native(
+    if let Err(e) = eframe::run_native(
         "ГЕНЕРАТОР 3MF",
         options,
         Box::new(|cc| {
             cc.egui_ctx.set_visuals(egui::Visuals::dark());
             Ok(Box::new(GeneratorApp::new(cc)))
         }),
-    );
-
-    if let Err(e) = res {
-        log::error!("eframe run_native terminated with error: {e:?}");
-    }
-
-    // Блокируем завершение функции android_main, чтобы не дропался AndroidApp
-    loop {
-        std::thread::park();
+    ) {
+        log::error!("eframe run_native failed: {e:?}");
     }
 }
