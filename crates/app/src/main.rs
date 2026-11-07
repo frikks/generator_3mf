@@ -1,6 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use generator_3mf::GeneratorApp;
+use generator_3mf_app::GeneratorApp;
 
 fn main() -> eframe::Result<()> {
     let native_options = eframe::NativeOptions {

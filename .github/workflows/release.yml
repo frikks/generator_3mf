@@ -32,14 +32,10 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Build Windows binary
         run: |
-          cargo build --release --example desktop || cargo build -p generator_3mf_app --release
+          cargo build -p generator_3mf_app --bin generator_3mf --release
           $VERSION = (Get-Content Cargo.toml | Select-String -Pattern '^version' | Select-Object -First 1).Line.Split('"')[1]
           New-Item -ItemType Directory -Force -Path out
-          if (Test-Path target/release/generator_3mf.exe) {
-            Copy-Item target/release/generator_3mf.exe "out/generator_3mf-$VERSION-windows-x86_64.exe"
-          } elseif (Test-Path target/release/generator_3mf_app.exe) {
-            Copy-Item target/release/generator_3mf_app.exe "out/generator_3mf-$VERSION-windows-x86_64.exe"
-          }
+          Copy-Item target/release/generator_3mf.exe "out/generator_3mf-$VERSION-windows-x86_64.exe"
       - uses: actions/upload-artifact@v4
         with:
           name: windows
@@ -94,7 +90,7 @@ jobs:
           export ANDROID_SDK_ROOT="$ANDROID_HOME"
           export CARGO_APK_RELEASE_KEYSTORE="$HOME/.android/debug.keystore"
           export CARGO_APK_RELEASE_KEYSTORE_PASSWORD=android
-          cargo apk build -p generator_3mf_app --release
+          cargo apk build -p generator_3mf_app --lib --release
           VERSION=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
           mkdir -p out
           cp target/release/apk/*.apk "out/generator_3mf-${VERSION}-android.apk"
