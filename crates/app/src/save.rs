@@ -14,7 +14,7 @@ pub fn save(data: &[u8], filename: &str, mime: &str) -> Result<Option<String>, S
     let array = js_sys::Array::new();
     array.push(&uint8_array.buffer());
 
-    let mut blob_props = web_sys::BlobPropertyBag::new();
+    let blob_props = web_sys::BlobPropertyBag::new();
     blob_props.set_type(mime);
 
     let blob = web_sys::Blob::new_with_u8_array_sequence_and_options(&array, &blob_props)

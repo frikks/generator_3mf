@@ -3,6 +3,11 @@ name = "generator_3mf_app"
 version = "0.2.0"
 edition = "2021"
 
+[lib]
+name = "generator_3mf"
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
 [[bin]]
 name = "generator_3mf"
 path = "src/main.rs"
@@ -18,7 +23,7 @@ log = "0.4"
 serde = { version = "1.0", features = ["derive"] }
 sys-locale = "0.3"
 
-# Файловый проводник только для настольных ОС (Windows / Linux / macOS)
+# Файловый диалог проводника только для настольных ОС
 [target.'cfg(not(any(target_arch = "wasm32", target_os = "android")))'.dependencies]
 rfd = "0.15"
 
