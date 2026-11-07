@@ -3,6 +3,10 @@ name = "generator_3mf_app"
 version = "0.2.0"
 edition = "2021"
 
+[[bin]]
+name = "generator_3mf"
+path = "src/main.rs"
+
 [dependencies]
 generator_3mf_core = { path = "../core" }
 eframe = { version = "0.30", default-features = false, features = [
@@ -11,8 +15,12 @@ eframe = { version = "0.30", default-features = false, features = [
     "persistence",
 ] }
 log = "0.4"
-rfd = "0.15"
 serde = { version = "1.0", features = ["derive"] }
+sys-locale = "0.3"
+
+# Файловый проводник только для настольных ОС (Windows / Linux / macOS)
+[target.'cfg(not(any(target_arch = "wasm32", target_os = "android")))'.dependencies]
+rfd = "0.15"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"

@@ -1,24 +1,19 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use eframe::egui;
-use generator_3mf::GeneratorApp;
+use generator_3mf_app::GeneratorApp;
 
-#[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result<()> {
     let native_options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_inner_size([1020.0, 720.0])
-            .with_min_inner_size([480.0, 360.0])
-            .with_title("ГЕНЕратор"),
+        viewport: eframe::egui::ViewportBuilder::default()
+            .with_inner_size([1280.0, 800.0])
+            .with_min_inner_size([640.0, 480.0])
+            .with_title("Generator 3MF"),
         ..Default::default()
     };
 
     eframe::run_native(
-        "ГЕНЕратор",
+        "Generator 3MF",
         native_options,
         Box::new(|cc| Ok(Box::new(GeneratorApp::new(cc)))),
     )
 }
-
-#[cfg(target_arch = "wasm32")]
-fn main() {}
