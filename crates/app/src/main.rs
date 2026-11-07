@@ -1,4 +1,4 @@
-#[cfg(not(target_os = "android"))]
+#[cfg(not(any(target_arch = "wasm32", target_os = "android")))]
 fn main() -> eframe::Result<()> {
     use eframe::egui;
 
@@ -22,5 +22,5 @@ fn main() -> eframe::Result<()> {
     )
 }
 
-#[cfg(target_os = "android")]
+#[cfg(any(target_arch = "wasm32", target_os = "android"))]
 fn main() {}
