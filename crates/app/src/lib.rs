@@ -14,30 +14,42 @@ use wasm_bindgen::prelude::*;
 pub fn start_web() -> Result<(), JsValue> {
     use wasm_bindgen::JsCast;
 
-    // Выводим читаемые паники Rust в консоль браузера
+    // Включаем читаемые сообщения об ошибках в консоли браузера
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));
     eframe::WebLogger::init(log::LevelFilter::Debug).ok();
 
     let web_options = eframe::WebOptions::default();
 
     wasm_bindgen_futures::spawn_local(async {
-        let document = web_sys::window()
-            .expect("No window found")
-            .document()
-            .expect("No document found");
+        let window = web_sys::window().expect("No window found");
+        let document = window.document().expect("No document found");
 
+        // Удаляем любые экраны и тексты загрузки, которые перекрывают экран
+        let loading_ids = ["loading", "loading_text", "loader", "loading-screen"];
+        for id in &loading_ids {
+            if let Some(elem) = document.get_element_by_id(id) {
+                elem.remove();
+            }
+        }
+        if let Ok(Some(elem)) = document.query_selector(".loading") {
+            elem.remove();
+        }
+        if let Ok(Some(elem)) = document.query_selector("#loading") {
+            elem.remove();
+        }
+
+        // Находим холст
         let canvas = document
             .get_element_by_id("the_canvas_id")
             .or_else(|| document.get_element_by_id("canvas"))
-            .or_else(|| {
-                document
-                    .query_selector("canvas")
-                    .ok()
-                    .flatten()
-            })
+            .or_else(|| document.query_selector("canvas").ok().flatten())
             .expect("Could not find any <canvas> element on page")
             .dyn_into::<web_sys::HtmlCanvasElement>()
             .expect("Target element is not a canvas");
+
+        // Разрешаем прием событий мыши холстом и передаем ему фокус
+        let _ = canvas.style().set_property("pointer-events", "auto");
+        let _ = canvas.focus();
 
         let runner = eframe::WebRunner::new();
         if let Err(err) = runner

@@ -3,33 +3,21 @@ name = "generator_3mf_app"
 version = "0.2.0"
 edition = "2021"
 
-[lib]
-name = "generator_3mf"
-crate-type = ["cdylib", "rlib"]
-
-[[bin]]
-name = "generator_3mf"
-path = "src/main.rs"
-
 [dependencies]
 generator_3mf_core = { path = "../core" }
-egui = "0.30"
 eframe = { version = "0.30", default-features = false, features = [
     "default_fonts",
     "glow",
+    "persistence",
 ] }
-image = { version = "0.25", default-features = false, features = ["png"] }
-sys-locale = "0.3"
-
-# Desktop (Windows, Linux, macOS)
-[target.'cfg(not(any(target_arch = "wasm32", target_os = "android")))'.dependencies]
+log = "0.4"
 rfd = "0.15"
+serde = { version = "1.0", features = ["derive"] }
 
-# WebAssembly
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
-console_error_panic_hook = "0.1.7"
+console_error_panic_hook = "0.1"
 js-sys = "0.3"
 log = "0.4"
 web-sys = { version = "0.3", features = [
@@ -43,9 +31,6 @@ web-sys = { version = "0.3", features = [
     "Window",
 ] }
 
-# Android
 [target.'cfg(target_os = "android")'.dependencies]
-winit = { version = "0.30", features = ["android-game-activity"] }
 android_logger = "0.14"
-log = "0.4"
-
+winit = { version = "0.30", features = ["android-native-activity"] }

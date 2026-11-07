@@ -133,31 +133,31 @@ pub fn apply(ctx: &egui::Context, kind: ThemeKind) {
     vis.window_fill = p.panel;
     vis.panel_fill = p.panel;
     vis.window_rounding = Rounding::same(12.0);
-    vis.window_stroke = Stroke::new(1.0, p.border);
+    vis.window_stroke = Stroke::new(1.0_f32, p.border);
 
     vis.widgets.noninteractive.bg_fill = p.panel;
-    vis.widgets.noninteractive.bg_stroke = Stroke::new(1.0, p.border);
-    vis.widgets.noninteractive.fg_stroke = Stroke::new(1.0, p.muted);
+    vis.widgets.noninteractive.bg_stroke = Stroke::new(1.0_f32, p.border);
+    vis.widgets.noninteractive.fg_stroke = Stroke::new(1.0_f32, p.muted);
     vis.widgets.noninteractive.rounding = Rounding::same(8.0);
 
     vis.widgets.inactive.bg_fill = p.widget;
-    vis.widgets.inactive.bg_stroke = Stroke::new(1.0, p.border);
-    vis.widgets.inactive.fg_stroke = Stroke::new(1.0, p.text);
+    vis.widgets.inactive.bg_stroke = Stroke::new(1.0_f32, p.border);
+    vis.widgets.inactive.fg_stroke = Stroke::new(1.0_f32, p.text);
     vis.widgets.inactive.rounding = Rounding::same(8.0);
 
     vis.widgets.hovered.bg_fill = p.widget;
-    vis.widgets.hovered.bg_stroke = Stroke::new(1.2, p.accent);
-    vis.widgets.hovered.fg_stroke = Stroke::new(1.0, p.text);
+    vis.widgets.hovered.bg_stroke = Stroke::new(1.2_f32, p.accent);
+    vis.widgets.hovered.fg_stroke = Stroke::new(1.0_f32, p.text);
     vis.widgets.hovered.rounding = Rounding::same(8.0);
 
     vis.widgets.active.bg_fill = p.accent;
-    vis.widgets.active.bg_stroke = Stroke::new(1.0, p.accent);
-    vis.widgets.active.fg_stroke = Stroke::new(1.0, p.on_accent);
+    vis.widgets.active.bg_stroke = Stroke::new(1.0_f32, p.accent);
+    vis.widgets.active.fg_stroke = Stroke::new(1.0_f32, p.on_accent);
     vis.widgets.active.rounding = Rounding::same(8.0);
 
     vis.widgets.open.bg_fill = p.widget;
-    vis.widgets.open.bg_stroke = Stroke::new(1.0, p.border);
-    vis.widgets.open.fg_stroke = Stroke::new(1.0, p.text);
+    vis.widgets.open.bg_stroke = Stroke::new(1.0_f32, p.border);
+    vis.widgets.open.fg_stroke = Stroke::new(1.0_f32, p.text);
     vis.widgets.open.rounding = Rounding::same(8.0);
 
     ctx.set_visuals(vis);
