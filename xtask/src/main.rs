@@ -31,6 +31,23 @@ fn run(cmd: &mut Command) {
 fn get_version() -> String {
     let root = root();
     let cargo_toml = std::fs::read_to_string(root.join("Cargo.toml")).expect("read root Cargo.toml");
+    let mut in_workspace_package = false;
+    for line in cargo_toml.lines() {
+        let line = line.trim();
+        if line.starts_with("[workspace.package]") {
+            in_workspace_package = true;
+            continue;
+        }
+        if line.starts_with('[') && line.ends_with(']') {
+            in_workspace_package = false;
+        }
+        if in_workspace_package && line.starts_with("version") {
+            if let Some(v) = line.split('"').nth(1) {
+                return v.to_string();
+            }
+        }
+    }
+    // Fallback search if workspace.package wasn't found
     for line in cargo_toml.lines() {
         let line = line.trim();
         if line.starts_with("version") {
