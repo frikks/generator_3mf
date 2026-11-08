@@ -130,15 +130,39 @@ impl Params {
         p.height_u = p.height_u.clamp(HEIGHT_RANGE.0, HEIGHT_RANGE.1);
         p.div_x = p.div_x.clamp(DIV_RANGE.0, DIV_RANGE.1);
         p.div_y = p.div_y.clamp(DIV_RANGE.0, DIV_RANGE.1);
-        p.wall = if p.wall.is_finite() { p.wall.clamp(WALL_RANGE.0, WALL_RANGE.1) } else { 1.2 };
+        p.wall = if p.wall.is_finite() {
+            p.wall.clamp(WALL_RANGE.0, WALL_RANGE.1)
+        } else {
+            1.2
+        };
         p.tool_holes_x = p.tool_holes_x.clamp(TOOL_HOLES_RANGE.0, TOOL_HOLES_RANGE.1);
         p.tool_holes_y = p.tool_holes_y.clamp(TOOL_HOLES_RANGE.0, TOOL_HOLES_RANGE.1);
-        p.tool_hole_depth = if p.tool_hole_depth.is_finite() { p.tool_hole_depth.clamp(2.0, 50.0) } else { 10.0 };
-        p.tool_hole_size = if p.tool_hole_size.is_finite() { p.tool_hole_size.clamp(1.5, 20.0) } else { 6.8 };
-        p.battery_holes_x = p.battery_holes_x.clamp(BATTERY_HOLES_RANGE.0, BATTERY_HOLES_RANGE.1);
-        p.battery_holes_y = p.battery_holes_y.clamp(BATTERY_HOLES_RANGE.0, BATTERY_HOLES_RANGE.1);
-        p.battery_hole_depth = if p.battery_hole_depth.is_finite() { p.battery_hole_depth.clamp(3.0, 75.0) } else { 25.0 };
-        p.battery_hole_dia = if p.battery_hole_dia.is_finite() { p.battery_hole_dia.clamp(5.0, 35.0) } else { 15.0 };
+        p.tool_hole_depth = if p.tool_hole_depth.is_finite() {
+            p.tool_hole_depth.clamp(2.0, 50.0)
+        } else {
+            10.0
+        };
+        p.tool_hole_size = if p.tool_hole_size.is_finite() {
+            p.tool_hole_size.clamp(1.5, 20.0)
+        } else {
+            6.8
+        };
+        p.battery_holes_x = p
+            .battery_holes_x
+            .clamp(BATTERY_HOLES_RANGE.0, BATTERY_HOLES_RANGE.1);
+        p.battery_holes_y = p
+            .battery_holes_y
+            .clamp(BATTERY_HOLES_RANGE.0, BATTERY_HOLES_RANGE.1);
+        p.battery_hole_depth = if p.battery_hole_depth.is_finite() {
+            p.battery_hole_depth.clamp(3.0, 75.0)
+        } else {
+            25.0
+        };
+        p.battery_hole_dia = if p.battery_hole_dia.is_finite() {
+            p.battery_hole_dia.clamp(5.0, 35.0)
+        } else {
+            15.0
+        };
         p
     }
 
@@ -192,7 +216,14 @@ pub fn generate(params: &Params) -> (Mesh, Vec<Warning>) {
 }
 
 fn inset_rect(w: f64, d: f64, r: f64, inset: f64) -> Vec<P2> {
-    rounded_rect(-w / 2.0 + inset, -d / 2.0 + inset, w / 2.0 - inset, d / 2.0 - inset, (r - inset).max(0.2), SEG)
+    rounded_rect(
+        -w / 2.0 + inset,
+        -d / 2.0 + inset,
+        w / 2.0 - inset,
+        d / 2.0 - inset,
+        (r - inset).max(0.2),
+        SEG,
+    )
 }
 
 fn square(cx: f64, cy: f64, size: f64, r: f64) -> Vec<P2> {
@@ -289,24 +320,43 @@ fn add_feet_slabs(p: &Params, outline: &[P2], slabs: &mut Vec<Slab>) {
     let centers = unit_centers(p.units_x, p.units_y);
     let holes = hole_points(&centers);
     let foot = |size: f64, r: f64| -> Vec<Vec<P2>> {
-        centers.iter().map(|&(cx, cy)| square(cx, cy, size, r)).collect()
+        centers
+            .iter()
+            .map(|&(cx, cy)| square(cx, cy, size, r))
+            .collect()
     };
     let f0 = foot(35.6, 0.8);
     let f1 = foot(37.2, 1.6);
     let f2 = foot(41.5, BIN_RADIUS);
-    let magnet_rings: Vec<Vec<P2>> = holes.iter().map(|&(x, y)| circle(x, y, MAGNET_D / 2.0, CIRCLE_SEG)).collect();
-    let screw_rings: Vec<Vec<P2>> = holes.iter().map(|&(x, y)| circle(x, y, SCREW_D / 2.0, CIRCLE_SEG / 2)).collect();
+    let magnet_rings: Vec<Vec<P2>> = holes
+        .iter()
+        .map(|&(x, y)| circle(x, y, MAGNET_D / 2.0, CIRCLE_SEG))
+        .collect();
+    let screw_rings: Vec<Vec<P2>> = holes
+        .iter()
+        .map(|&(x, y)| circle(x, y, SCREW_D / 2.0, CIRCLE_SEG / 2))
+        .collect();
     let holes_at = |z: f64| -> Vec<Ring> {
         if p.magnets && z < MAGNET_DEPTH {
-            magnet_rings.iter().map(|r| Ring::prism(r.clone(), true)).collect()
+            magnet_rings
+                .iter()
+                .map(|r| Ring::prism(r.clone(), true))
+                .collect()
         } else if p.screws {
-            screw_rings.iter().map(|r| Ring::prism(r.clone(), true)).collect()
+            screw_rings
+                .iter()
+                .map(|r| Ring::prism(r.clone(), true))
+                .collect()
         } else {
             Vec::new()
         }
     };
     let mut foot_slab = |z0: f64, z1: f64, a: &[Vec<P2>], b: &[Vec<P2>]| {
-        let mut rings: Vec<Ring> = a.iter().zip(b).map(|(x, y)| Ring::loft(x.clone(), y.clone(), false)).collect();
+        let mut rings: Vec<Ring> = a
+            .iter()
+            .zip(b)
+            .map(|(x, y)| Ring::loft(x.clone(), y.clone(), false))
+            .collect();
         rings.extend(holes_at((z0 + z1) / 2.0));
         slabs.push(Slab { z0, z1, rings });
     };
@@ -323,7 +373,11 @@ fn add_feet_slabs(p: &Params, outline: &[P2], slabs: &mut Vec<Slab>) {
     if p.screws {
         rings.extend(screw_rings.iter().map(|r| Ring::prism(r.clone(), true)));
     }
-    slabs.push(Slab { z0: FOOT_HEIGHT, z1: FLOOR_TOP, rings });
+    slabs.push(Slab {
+        z0: FOOT_HEIGHT,
+        z1: FLOOR_TOP,
+        rings,
+    });
 }
 
 fn bin(p: &Params) -> (Mesh, Vec<Warning>) {
@@ -390,7 +444,15 @@ fn bin(p: &Params) -> (Mesh, Vec<Warning>) {
         for i in 0..nx {
             let x0 = -w / 2.0 + t + i as f64 * (cw + t);
             let y0 = -d / 2.0 + t + j as f64 * (cd + t);
-            comps.push(Comp { x0, y0, x1: x0 + cw, y1: y0 + cd, r: rc, front: true, back: j == ny - 1 });
+            comps.push(Comp {
+                x0,
+                y0,
+                x1: x0 + cw,
+                y1: y0 + cd,
+                r: rc,
+                front: true,
+                back: j == ny - 1,
+            });
         }
     }
     let mut zs = vec![FLOOR_TOP, div_top];
@@ -410,7 +472,11 @@ fn bin(p: &Params) -> (Mesh, Vec<Warning>) {
         let (z0, z1) = (win[0], win[1]);
         let mut rings = vec![Ring::prism(outline.clone(), false)];
         for c in &comps {
-            rings.push(Ring::loft(comp_ring(c, &feat, z0), comp_ring(c, &feat, z1), true));
+            rings.push(Ring::loft(
+                comp_ring(c, &feat, z0),
+                comp_ring(c, &feat, z1),
+                true,
+            ));
         }
         slabs.push(Slab { z0, z1, rings });
     }
@@ -421,7 +487,11 @@ fn bin(p: &Params) -> (Mesh, Vec<Warning>) {
             z1,
             rings: vec![
                 Ring::prism(outline.clone(), false),
-                Ring::loft(inset_rect(w, d, BIN_RADIUS, a), inset_rect(w, d, BIN_RADIUS, b), true),
+                Ring::loft(
+                    inset_rect(w, d, BIN_RADIUS, a),
+                    inset_rect(w, d, BIN_RADIUS, b),
+                    true,
+                ),
             ],
         };
         if div_top < h - 1e-6 {
@@ -603,7 +673,11 @@ fn lid(p: &Params) -> Mesh {
 const PLATE_PROFILE: f64 = 4.45;
 
 fn plate_floor(p: &Params) -> f64 {
-    if p.plate_magnets { 3.0 } else { 0.0 }
+    if p.plate_magnets {
+        3.0
+    } else {
+        0.0
+    }
 }
 
 fn baseplate(p: &Params) -> Mesh {
@@ -613,10 +687,16 @@ fn baseplate(p: &Params) -> Mesh {
     let centers = unit_centers(p.units_x, p.units_y);
     let fz = plate_floor(p);
     let pocket = |inset: f64| -> Vec<Vec<P2>> {
-        centers.iter().map(|&(cx, cy)| square(cx, cy, PITCH - 2.0 * inset, (PLATE_RADIUS - inset).max(0.2))).collect()
+        centers
+            .iter()
+            .map(|&(cx, cy)| square(cx, cy, PITCH - 2.0 * inset, (PLATE_RADIUS - inset).max(0.2)))
+            .collect()
     };
     let center_cutouts: Vec<Vec<P2>> = if p.plate_skeleton {
-        centers.iter().map(|&(cx, cy)| square(cx, cy, 21.0, 2.0)).collect()
+        centers
+            .iter()
+            .map(|&(cx, cy)| square(cx, cy, 21.0, 2.0))
+            .collect()
     } else {
         Vec::new()
     };
@@ -629,7 +709,11 @@ fn baseplate(p: &Params) -> Mesh {
         if p.plate_skeleton {
             base_rings.extend(center_cutouts.iter().map(|c| Ring::prism(c.clone(), true)));
         }
-        slabs.push(Slab { z0: 0.0, z1: skin, rings: base_rings });
+        slabs.push(Slab {
+            z0: 0.0,
+            z1: skin,
+            rings: base_rings,
+        });
 
         let mut rings = vec![Ring::prism(outline.clone(), false)];
         if p.plate_skeleton {
@@ -638,7 +722,11 @@ fn baseplate(p: &Params) -> Mesh {
         for (x, y) in hole_points(&centers) {
             rings.push(Ring::prism(circle(x, y, MAGNET_D / 2.0, CIRCLE_SEG), true));
         }
-        slabs.push(Slab { z0: skin, z1: fz, rings });
+        slabs.push(Slab {
+            z0: skin,
+            z1: fz,
+            rings,
+        });
     } else if p.plate_skeleton {
         slabs.push(Slab {
             z0: 0.0,
@@ -647,7 +735,11 @@ fn baseplate(p: &Params) -> Mesh {
         });
     }
 
-    let z_start = if !p.plate_magnets && p.plate_skeleton { 0.8 } else { fz };
+    let z_start = if !p.plate_magnets && p.plate_skeleton {
+        0.8
+    } else {
+        fz
+    };
 
     let stage = |z0: f64, z1: f64, a: f64, b: f64| {
         let mut rings = vec![Ring::prism(outline.clone(), false)];
@@ -677,7 +769,12 @@ mod tests {
         let s = p.size();
         assert!((hi[0] - lo[0] - s[0]).abs() < 1e-3, "x size");
         assert!((hi[1] - lo[1] - s[1]).abs() < 1e-3, "y size");
-        assert!((hi[2] - lo[2] - s[2]).abs() < 1e-3, "z size {:?} vs {:?}", hi[2] - lo[2], s[2]);
+        assert!(
+            (hi[2] - lo[2] - s[2]).abs() < 1e-3,
+            "z size {:?} vs {:?}",
+            hi[2] - lo[2],
+            s[2]
+        );
     }
 
     #[test]

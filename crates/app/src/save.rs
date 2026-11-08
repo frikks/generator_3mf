@@ -3,7 +3,9 @@ pub fn save_file(data: &[u8], default_name: &str, _ext: &str) -> Result<Option<S
     {
         use eframe::wasm_bindgen::JsCast;
         let window = web_sys::window().ok_or_else(|| "No window found".to_string())?;
-        let document = window.document().ok_or_else(|| "No document found".to_string())?;
+        let document = window
+            .document()
+            .ok_or_else(|| "No document found".to_string())?;
 
         let array = js_sys::Array::new();
         let uint8_array = js_sys::Uint8Array::new_with_length(data.len() as u32);
@@ -15,8 +17,7 @@ pub fn save_file(data: &[u8], default_name: &str, _ext: &str) -> Result<Option<S
 
         let blob = web_sys::Blob::new_with_u8_array_sequence_and_options(&array, &property_bag)
             .map_err(|e| format!("{e:?}"))?;
-        let url = web_sys::Url::create_object_url_with_blob(&blob)
-            .map_err(|e| format!("{e:?}"))?;
+        let url = web_sys::Url::create_object_url_with_blob(&blob).map_err(|e| format!("{e:?}"))?;
 
         let element = document.create_element("a").map_err(|e| format!("{e:?}"))?;
         let anchor = element

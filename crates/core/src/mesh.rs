@@ -44,7 +44,12 @@ pub struct MeshBuilder {
 
 impl MeshBuilder {
     pub fn new() -> Self {
-        Self { tol: 1e-5, cell: 1e-3, grid: HashMap::new(), mesh: Mesh::default() }
+        Self {
+            tol: 1e-5,
+            cell: 1e-3,
+            grid: HashMap::new(),
+            mesh: Mesh::default(),
+        }
     }
 
     fn key(&self, p: P3) -> (i64, i64, i64) {
@@ -138,7 +143,9 @@ fn fix_t_junctions(m: &mut Mesh) {
             if (a[2] - b[2]).abs() > 1e-7 {
                 continue;
             }
-            let Some(g) = grids.get(&lkey(a[2])) else { continue };
+            let Some(g) = grids.get(&lkey(a[2])) else {
+                continue;
+            };
             let dx = b[0] - a[0];
             let dy = b[1] - a[1];
             let len2 = dx * dx + dy * dy;
@@ -152,7 +159,9 @@ fn fix_t_junctions(m: &mut Mesh) {
             let y1 = ((a[1].max(b[1]) + EPS) / cell).floor() as i64;
             for gx in x0..=x1 {
                 for gy in y0..=y1 {
-                    let Some(list) = g.get(&(gx, gy)) else { continue };
+                    let Some(list) = g.get(&(gx, gy)) else {
+                        continue;
+                    };
                     for &ip in list {
                         if ip == ia || ip == ib {
                             continue;
@@ -209,7 +218,11 @@ fn fix_t_junctions(m: &mut Mesh) {
             let a = m.vertices[t[0] as usize];
             let b = m.vertices[t[1] as usize];
             let c = m.vertices[t[2] as usize];
-            let cen = [(a[0] + b[0] + c[0]) / 3.0, (a[1] + b[1] + c[1]) / 3.0, (a[2] + b[2] + c[2]) / 3.0];
+            let cen = [
+                (a[0] + b[0] + c[0]) / 3.0,
+                (a[1] + b[1] + c[1]) / 3.0,
+                (a[2] + b[2] + c[2]) / 3.0,
+            ];
             let ic = m.vertices.len() as u32;
             m.vertices.push(cen);
             for i in 0..ring.len() {
@@ -229,7 +242,10 @@ impl Mesh {
             if t[0] == t[1] || t[1] == t[2] || t[0] == t[2] {
                 return false;
             }
-            let n = cross(sub(v[t[1] as usize], v[t[0] as usize]), sub(v[t[2] as usize], v[t[0] as usize]));
+            let n = cross(
+                sub(v[t[1] as usize], v[t[0] as usize]),
+                sub(v[t[2] as usize], v[t[0] as usize]),
+            );
             dot(n, n) > 1e-18
         });
     }

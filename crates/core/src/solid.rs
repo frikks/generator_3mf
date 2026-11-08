@@ -24,10 +24,18 @@ pub struct Ring {
 
 impl Ring {
     pub fn prism(points: Vec<P2>, hole: bool) -> Self {
-        Self { top: points.clone(), bottom: points, hole }
+        Self {
+            top: points.clone(),
+            bottom: points,
+            hole,
+        }
     }
     pub fn loft(bottom: Vec<P2>, top: Vec<P2>, hole: bool) -> Self {
-        assert_eq!(bottom.len(), top.len(), "loft rings need equal vertex counts");
+        assert_eq!(
+            bottom.len(),
+            top.len(),
+            "loft rings need equal vertex counts"
+        );
         Self { bottom, top, hole }
     }
 }
@@ -52,7 +60,11 @@ pub fn signed_area(p: &[P2]) -> f64 {
 /// Counter-clockwise rounded rectangle. Every call with the same `seg` returns
 /// the same number of vertices, which allows lofting between sizes.
 pub fn rounded_rect(x0: f64, y0: f64, x1: f64, y1: f64, r: f64, seg: usize) -> Vec<P2> {
-    let r = r.max(0.05).min((x1 - x0) * 0.5 - 1e-4).min((y1 - y0) * 0.5 - 1e-4).max(1e-3);
+    let r = r
+        .max(0.05)
+        .min((x1 - x0) * 0.5 - 1e-4)
+        .min((y1 - y0) * 0.5 - 1e-4)
+        .max(1e-3);
     let corners = [
         (x1 - r, y0 + r, -0.5 * PI),
         (x1 - r, y1 - r, 0.0),
@@ -79,7 +91,10 @@ pub fn circle(cx: f64, cy: f64, r: f64, seg: usize) -> Vec<P2> {
 }
 
 fn section(rings: &[Ring], top: bool) -> Vec<Vec<P2>> {
-    rings.iter().map(|r| if top { r.top.clone() } else { r.bottom.clone() }).collect()
+    rings
+        .iter()
+        .map(|r| if top { r.top.clone() } else { r.bottom.clone() })
+        .collect()
 }
 
 fn same_section(a: &[Vec<P2>], b: &[Vec<P2>]) -> bool {
@@ -88,7 +103,9 @@ fn same_section(a: &[Vec<P2>], b: &[Vec<P2>]) -> bool {
     }
     a.iter().zip(b).all(|(x, y)| {
         x.len() == y.len()
-            && x.iter().zip(y).all(|(p, q)| (p[0] - q[0]).abs() < 1e-9 && (p[1] - q[1]).abs() < 1e-9)
+            && x.iter()
+                .zip(y)
+                .all(|(p, q)| (p[0] - q[0]).abs() < 1e-9 && (p[1] - q[1]).abs() < 1e-9)
     })
 }
 
@@ -113,7 +130,7 @@ fn cap(builder: &mut MeshBuilder, region: Vec<Vec<Vec<P2>>>, z: f64, up: bool) {
         }
         let tri = shape.triangulate().to_triangulation::<u32>();
         let pts = &tri.points;
-        for t in tri.indices.chunks_exact(3) {
+        for t in tri.indices.as_chunks::<3>().0 {
             let a = pts[t[0] as usize];
             let b = pts[t[1] as usize];
             let c = pts[t[2] as usize];
@@ -138,7 +155,11 @@ pub fn build(slabs: &[Slab]) -> Mesh {
             let mut top = ring.top.clone();
             let area = {
                 let a = signed_area(&bot);
-                if a.abs() > 1e-9 { a } else { signed_area(&top) }
+                if a.abs() > 1e-9 {
+                    a
+                } else {
+                    signed_area(&top)
+                }
             };
             let want_ccw = !ring.hole;
             if (area > 0.0) != want_ccw {
@@ -159,9 +180,21 @@ pub fn build(slabs: &[Slab]) -> Mesh {
     }
     // Caps between slabs (and at the very bottom and top).
     for k in 0..=slabs.len() {
-        let below = if k > 0 { section(&slabs[k - 1].rings, true) } else { Vec::new() };
-        let above = if k < slabs.len() { section(&slabs[k].rings, false) } else { Vec::new() };
-        let z = if k < slabs.len() { slabs[k].z0 } else { slabs[k - 1].z1 };
+        let below = if k > 0 {
+            section(&slabs[k - 1].rings, true)
+        } else {
+            Vec::new()
+        };
+        let above = if k < slabs.len() {
+            section(&slabs[k].rings, false)
+        } else {
+            Vec::new()
+        };
+        let z = if k < slabs.len() {
+            slabs[k].z0
+        } else {
+            slabs[k - 1].z1
+        };
         if same_section(&below, &above) {
             continue;
         }

@@ -16,7 +16,12 @@ pub fn stl(mesh: &Mesh, name: &str) -> Vec<u8> {
         let a = mesh.vertices[t[0] as usize];
         let b = mesh.vertices[t[1] as usize];
         let c = mesh.vertices[t[2] as usize];
-        for v in triangle_normal(a, b, c).into_iter().chain(a).chain(b).chain(c) {
+        for v in triangle_normal(a, b, c)
+            .into_iter()
+            .chain(a)
+            .chain(b)
+            .chain(c)
+        {
             out.extend_from_slice(&(v as f32).to_le_bytes());
         }
         out.extend_from_slice(&[0, 0]);
@@ -84,14 +89,21 @@ pub fn three_mf(mesh: &Mesh, name: &str, color: [u8; 3], offset: [f64; 2]) -> Ve
     }
     model.push_str("    </vertices>\n    <triangles>\n");
     for t in &mesh.triangles {
-        let _ = writeln!(model, "     <triangle v1=\"{}\" v2=\"{}\" v3=\"{}\"/>", t[0], t[1], t[2]);
+        let _ = writeln!(
+            model,
+            "     <triangle v1=\"{}\" v2=\"{}\" v3=\"{}\"/>",
+            t[0], t[1], t[2]
+        );
     }
     model.push_str("    </triangles>\n   </mesh>\n  </object>\n </resources>\n <build>\n");
     let mut tr = String::new();
     fmt_num(&mut tr, offset[0]);
     tr.push(' ');
     fmt_num(&mut tr, offset[1]);
-    let _ = write!(model, "  <item objectid=\"2\" transform=\"1 0 0 0 1 0 0 0 1 {tr} 0\"/>\n </build>\n</model>\n");
+    let _ = write!(
+        model,
+        "  <item objectid=\"2\" transform=\"1 0 0 0 1 0 0 0 1 {tr} 0\"/>\n </build>\n</model>\n"
+    );
 
     let content_types = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
 <Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">\n\
@@ -121,7 +133,11 @@ impl ZipWriter {
     pub fn add(&mut self, name: &str, content: &[u8]) {
         let crc = crc32fast::hash(content);
         let packed = miniz_oxide::deflate::compress_to_vec(content, 6);
-        let (method, body): (u16, &[u8]) = if packed.len() < content.len() { (8, &packed) } else { (0, content) };
+        let (method, body): (u16, &[u8]) = if packed.len() < content.len() {
+            (8, &packed)
+        } else {
+            (0, content)
+        };
         let offset = self.data.len() as u32;
         let name_b = name.as_bytes();
         // DOS date 1980-01-01 00:00 keeps output reproducible.

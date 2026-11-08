@@ -1,7 +1,7 @@
 //! Colour palettes and theme application.
 
-use eframe::egui::{self, Color32, Rounding, Stroke, Visuals};
 use crate::i18n::Strings;
+use eframe::egui::{self, Color32, Rounding, Stroke, Visuals};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ThemeKind {
@@ -127,7 +127,11 @@ pub struct Palette {
 pub fn apply(ctx: &egui::Context, kind: ThemeKind) {
     let p = kind.palette();
     let is_dark = kind != ThemeKind::Light;
-    let mut vis = if is_dark { Visuals::dark() } else { Visuals::light() };
+    let mut vis = if is_dark {
+        Visuals::dark()
+    } else {
+        Visuals::light()
+    };
 
     vis.override_text_color = Some(p.text);
     vis.window_fill = p.panel;

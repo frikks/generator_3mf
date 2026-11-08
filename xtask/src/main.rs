@@ -16,7 +16,10 @@ fn main() {
 }
 
 fn root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().to_path_buf()
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .to_path_buf()
 }
 
 fn run(cmd: &mut Command) {
@@ -30,7 +33,8 @@ fn run(cmd: &mut Command) {
 
 fn get_version() -> String {
     let root = root();
-    let cargo_toml = std::fs::read_to_string(root.join("Cargo.toml")).expect("read root Cargo.toml");
+    let cargo_toml =
+        std::fs::read_to_string(root.join("Cargo.toml")).expect("read root Cargo.toml");
     let mut in_workspace_package = false;
     for line in cargo_toml.lines() {
         let line = line.trim();
@@ -61,14 +65,26 @@ fn get_version() -> String {
 fn web() {
     let root = root();
     let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
-    run(Command::new(&cargo)
-        .current_dir(&root)
-        .args(["build", "-p", "generator_3mf_app", "--lib", "--release", "--target", "wasm32-unknown-unknown"]));
+    run(Command::new(&cargo).current_dir(&root).args([
+        "build",
+        "-p",
+        "generator_3mf_app",
+        "--lib",
+        "--release",
+        "--target",
+        "wasm32-unknown-unknown",
+    ]));
     let out = root.join("target/web");
     run(Command::new("wasm-bindgen")
         .current_dir(&root)
         .arg("target/wasm32-unknown-unknown/release/generator_3mf.wasm")
-        .args(["--out-dir", out.to_str().unwrap(), "--target", "web", "--no-typescript"]));
+        .args([
+            "--out-dir",
+            out.to_str().unwrap(),
+            "--target",
+            "web",
+            "--no-typescript",
+        ]));
 
     let js = std::fs::read_to_string(out.join("generator_3mf.js")).expect("read js");
     let wasm = std::fs::read(out.join("generator_3mf_bg.wasm")).expect("read wasm");
@@ -84,19 +100,25 @@ fn web() {
         .join("\n");
     let template = std::fs::read_to_string(root.join("web/index.html")).expect("read template");
     let version = get_version();
-    
+
     // Убран await перед start(), чтобы не блокировать удаление оверлея бесконечным циклом рендеринга
     let boot = format!(
         "{js}\nconst __b64 = \"{}\";\nconst __bin = Uint8Array.from(atob(__b64), c => c.charCodeAt(0));\ntry {{\n    await __wbg_init({{ module_or_path: __bin }});\n    new WebHandle().start(\"app\");\n    document.getElementById('loading')?.remove();\n}} catch (e) {{\n    console.error(\"Failed to start web app:\", e);\n    document.getElementById('loading').innerText = \"Error: \" + e.message;\n}}\n",
         base64(&wasm)
     );
-    
-    let html = template.replace("{{VERSION}}", &version).replace("{{SCRIPT}}", &boot.replace("</script", "<\\/script"));
+
+    let html = template
+        .replace("{{VERSION}}", &version)
+        .replace("{{SCRIPT}}", &boot.replace("</script", "<\\/script"));
     let dist = root.join("dist");
     std::fs::create_dir_all(&dist).unwrap();
     let path = dist.join(format!("generator_3mf-{version}.html"));
     std::fs::write(&path, html).unwrap();
-    eprintln!("wrote {} ({} KiB)", path.display(), std::fs::metadata(&path).unwrap().len() / 1024);
+    eprintln!(
+        "wrote {} ({} KiB)",
+        path.display(),
+        std::fs::metadata(&path).unwrap().len() / 1024
+    );
 }
 
 fn base64(data: &[u8]) -> String {
@@ -107,8 +129,16 @@ fn base64(data: &[u8]) -> String {
         let n = (b[0] as u32) << 16 | (b[1] as u32) << 8 | b[2] as u32;
         s.push(T[(n >> 18) as usize & 63] as char);
         s.push(T[(n >> 12) as usize & 63] as char);
-        s.push(if c.len() > 1 { T[(n >> 6) as usize & 63] as char } else { '=' });
-        s.push(if c.len() > 2 { T[n as usize & 63] as char } else { '=' });
+        s.push(if c.len() > 1 {
+            T[(n >> 6) as usize & 63] as char
+        } else {
+            '='
+        });
+        s.push(if c.len() > 2 {
+            T[n as usize & 63] as char
+        } else {
+            '='
+        });
     }
     s
 }

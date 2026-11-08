@@ -34,7 +34,15 @@ enum Preset {
 }
 
 impl Preset {
-    const ALL: [Preset; 7] = [Preset::Small, Preset::Workhorse, Preset::Tray, Preset::Organizer, Preset::Tall, Preset::Plate3, Preset::Plate4];
+    const ALL: [Preset; 7] = [
+        Preset::Small,
+        Preset::Workhorse,
+        Preset::Tray,
+        Preset::Organizer,
+        Preset::Tall,
+        Preset::Plate3,
+        Preset::Plate4,
+    ];
     fn label(self, t: &Strings) -> &'static str {
         match self {
             Preset::Custom => t.custom,
@@ -48,7 +56,15 @@ impl Preset {
         }
     }
     fn apply(self, p: &mut Params) {
-        let bin = |ux, uy, h, dx, dy| Params { kind: Kind::Bin, units_x: ux, units_y: uy, height_u: h, div_x: dx, div_y: dy, ..p.clone() };
+        let bin = |ux, uy, h, dx, dy| Params {
+            kind: Kind::Bin,
+            units_x: ux,
+            units_y: uy,
+            height_u: h,
+            div_x: dx,
+            div_y: dy,
+            ..p.clone()
+        };
         *p = match self {
             Preset::Custom => return,
             Preset::Small => bin(1, 1, 3, 1, 1),
@@ -56,8 +72,18 @@ impl Preset {
             Preset::Tray => bin(2, 2, 3, 2, 2),
             Preset::Organizer => bin(3, 2, 6, 3, 2),
             Preset::Tall => bin(1, 2, 12, 1, 1),
-            Preset::Plate3 => Params { kind: Kind::Baseplate, units_x: 3, units_y: 3, ..p.clone() },
-            Preset::Plate4 => Params { kind: Kind::Baseplate, units_x: 4, units_y: 4, ..p.clone() },
+            Preset::Plate3 => Params {
+                kind: Kind::Baseplate,
+                units_x: 3,
+                units_y: 3,
+                ..p.clone()
+            },
+            Preset::Plate4 => Params {
+                kind: Kind::Baseplate,
+                units_x: 4,
+                units_y: 4,
+                ..p.clone()
+            },
         };
     }
 }
@@ -86,7 +112,13 @@ const DEFAULT_COLOR: [u8; 3] = [0xe0, 0x66, 0x2b];
 
 fn detect_lang() -> Lang {
     sys_locale::get_locale()
-        .map(|l| if l.to_lowercase().starts_with("ru") { Lang::Ru } else { Lang::En })
+        .map(|l| {
+            if l.to_lowercase().starts_with("ru") {
+                Lang::Ru
+            } else {
+                Lang::En
+            }
+        })
         .unwrap_or(Lang::En)
 }
 
@@ -115,7 +147,10 @@ fn params_to_string(p: &Params) -> String {
         p.plate_magnets as u8,
         p.tool_holes_x,
         p.tool_holes_y,
-        match p.tool_hole_kind { ToolHoleKind::HexBit => 0, ToolHoleKind::Round => 1 },
+        match p.tool_hole_kind {
+            ToolHoleKind::HexBit => 0,
+            ToolHoleKind::Round => 1,
+        },
         p.tool_hole_depth,
         p.tool_hole_size,
         match p.battery_kind {
@@ -268,9 +303,19 @@ impl GeneratorApp {
             .name
             .trim()
             .chars()
-            .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' { c } else { '_' })
+            .map(|c| {
+                if c.is_alphanumeric() || c == '-' || c == '_' {
+                    c
+                } else {
+                    '_'
+                }
+            })
             .collect();
-        let base = if clean.is_empty() { "generator".to_string() } else { clean };
+        let base = if clean.is_empty() {
+            "generator".to_string()
+        } else {
+            clean
+        };
         format!("{base}_{}", self.params.slug())
     }
 
@@ -285,7 +330,9 @@ impl GeneratorApp {
                     self.warnings = w;
                     self.job = None;
                 }
-                Err(std::sync::mpsc::TryRecvError::Empty) => ctx.request_repaint_after(std::time::Duration::from_millis(30)),
+                Err(std::sync::mpsc::TryRecvError::Empty) => {
+                    ctx.request_repaint_after(std::time::Duration::from_millis(30))
+                }
                 Err(_) => self.job = None,
             }
         }
@@ -339,7 +386,12 @@ impl GeneratorApp {
     }
 }
 
-fn card<R>(ui: &mut egui::Ui, pal: &Palette, title: &str, add: impl FnOnce(&mut egui::Ui) -> R) -> R {
+fn card<R>(
+    ui: &mut egui::Ui,
+    pal: &Palette,
+    title: &str,
+    add: impl FnOnce(&mut egui::Ui) -> R,
+) -> R {
     egui::Frame::none()
         .fill(pal.panel)
         .stroke(Stroke::new(1.0_f32, pal.border))
@@ -354,7 +406,13 @@ fn card<R>(ui: &mut egui::Ui, pal: &Palette, title: &str, add: impl FnOnce(&mut 
         .inner
 }
 
-fn stepper(ui: &mut egui::Ui, label: &str, hint: Option<&str>, v: &mut u32, range: (u32, u32)) -> bool {
+fn stepper(
+    ui: &mut egui::Ui,
+    label: &str,
+    hint: Option<&str>,
+    v: &mut u32,
+    range: (u32, u32),
+) -> bool {
     let mut changed = false;
     ui.horizontal(|ui| {
         let r = ui.label(label);
@@ -362,14 +420,29 @@ fn stepper(ui: &mut egui::Ui, label: &str, hint: Option<&str>, v: &mut u32, rang
             r.on_hover_text(h);
         }
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            if ui.add_enabled(*v < range.1, egui::Button::new(RichText::new("+").strong()).min_size(egui::vec2(32.0, 30.0))).clicked() {
+            if ui
+                .add_enabled(
+                    *v < range.1,
+                    egui::Button::new(RichText::new("+").strong()).min_size(egui::vec2(32.0, 30.0)),
+                )
+                .clicked()
+            {
                 *v += 1;
                 changed = true;
             }
-            if ui.add(egui::DragValue::new(v).range(range.0..=range.1).speed(0.1)).changed() {
+            if ui
+                .add(egui::DragValue::new(v).range(range.0..=range.1).speed(0.1))
+                .changed()
+            {
                 changed = true;
             }
-            if ui.add_enabled(*v > range.0, egui::Button::new(RichText::new("−").strong()).min_size(egui::vec2(32.0, 30.0))).clicked() {
+            if ui
+                .add_enabled(
+                    *v > range.0,
+                    egui::Button::new(RichText::new("−").strong()).min_size(egui::vec2(32.0, 30.0)),
+                )
+                .clicked()
+            {
                 *v -= 1;
                 changed = true;
             }
@@ -405,7 +478,12 @@ impl GeneratorApp {
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 for l in Lang::ALL.iter().rev() {
                     let on = self.lang == *l;
-                    let b = egui::Button::new(RichText::new(l.code().to_uppercase()).color(if on { pal.on_accent } else { pal.text }))
+                    let b =
+                        egui::Button::new(RichText::new(l.code().to_uppercase()).color(if on {
+                            pal.on_accent
+                        } else {
+                            pal.text
+                        }))
                         .fill(if on { pal.accent } else { pal.widget })
                         .min_size(egui::vec2(38.0, 28.0));
                     if ui.add(b).on_hover_text(l.native_name()).clicked() {
@@ -414,7 +492,11 @@ impl GeneratorApp {
                 }
                 ui.add_space(6.0);
                 egui::ComboBox::from_id_salt("theme")
-                    .selected_text(if narrow { self.theme.label(t).to_string() } else { format!("{}: {}", t.theme, self.theme.label(t)) })
+                    .selected_text(if narrow {
+                        self.theme.label(t).to_string()
+                    } else {
+                        format!("{}: {}", t.theme, self.theme.label(t))
+                    })
                     .show_ui(ui, |ui| {
                         for k in ThemeKind::ALL {
                             ui.selectable_value(&mut self.theme, k, k.label(t));
@@ -439,11 +521,11 @@ impl GeneratorApp {
             ];
             for (tab, label) in tabs {
                 let is_active = self.tab == tab;
-                let btn = egui::Button::new(
-                    RichText::new(label)
-                        .strong()
-                        .color(if is_active { pal.on_accent } else { pal.text }),
-                )
+                let btn = egui::Button::new(RichText::new(label).strong().color(if is_active {
+                    pal.on_accent
+                } else {
+                    pal.text
+                }))
                 .fill(if is_active { pal.accent } else { pal.widget })
                 .min_size(egui::vec2(60.0, 30.0));
 
@@ -463,37 +545,62 @@ impl GeneratorApp {
         ui.add_space(8.0);
 
         card(ui, pal, t.file, |ui| {
-            egui::Grid::new("file_grid").num_columns(2).spacing([10.0, 8.0]).show(ui, |ui| {
-                ui.label(t.name);
-                ui.add(egui::TextEdit::singleline(&mut self.name).char_limit(48).desired_width(f32::INFINITY));
-                ui.end_row();
-                ui.label(t.preset);
-                let mut sel = self.preset;
-                egui::ComboBox::from_id_salt("preset")
-                    .width(ui.available_width())
-                    .selected_text(self.preset.label(t))
-                    .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut sel, Preset::Custom, t.custom);
-                        for p in Preset::ALL {
-                            ui.selectable_value(&mut sel, p, p.label(t));
-                        }
-                    });
-                if sel != self.preset {
-                    self.preset = sel;
-                    sel.apply(&mut self.params);
-                    changed = true;
-                }
-                ui.end_row();
-            });
+            egui::Grid::new("file_grid")
+                .num_columns(2)
+                .spacing([10.0, 8.0])
+                .show(ui, |ui| {
+                    ui.label(t.name);
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.name)
+                            .char_limit(48)
+                            .desired_width(f32::INFINITY),
+                    );
+                    ui.end_row();
+                    ui.label(t.preset);
+                    let mut sel = self.preset;
+                    egui::ComboBox::from_id_salt("preset")
+                        .width(ui.available_width())
+                        .selected_text(self.preset.label(t))
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(&mut sel, Preset::Custom, t.custom);
+                            for p in Preset::ALL {
+                                ui.selectable_value(&mut sel, p, p.label(t));
+                            }
+                        });
+                    if sel != self.preset {
+                        self.preset = sel;
+                        sel.apply(&mut self.params);
+                        changed = true;
+                    }
+                    ui.end_row();
+                });
         });
         ui.add_space(8.0);
 
         match self.tab {
             ActiveTab::Bins => {
                 card(ui, pal, t.part, |ui| {
-                    changed |= stepper(ui, t.units_wide, Some(t.units_hint), &mut self.params.units_x, UNITS_RANGE);
-                    changed |= stepper(ui, t.units_deep, Some(t.units_hint), &mut self.params.units_y, UNITS_RANGE);
-                    changed |= stepper(ui, t.height_u, Some(t.height_hint), &mut self.params.height_u, HEIGHT_RANGE);
+                    changed |= stepper(
+                        ui,
+                        t.units_wide,
+                        Some(t.units_hint),
+                        &mut self.params.units_x,
+                        UNITS_RANGE,
+                    );
+                    changed |= stepper(
+                        ui,
+                        t.units_deep,
+                        Some(t.units_hint),
+                        &mut self.params.units_y,
+                        UNITS_RANGE,
+                    );
+                    changed |= stepper(
+                        ui,
+                        t.height_u,
+                        Some(t.height_hint),
+                        &mut self.params.height_u,
+                        HEIGHT_RANGE,
+                    );
                     ui.label(RichText::new(t.height_hint).size(12.5).color(pal.muted));
                 });
                 ui.add_space(8.0);
@@ -511,7 +618,14 @@ impl GeneratorApp {
                     ui.horizontal(|ui| {
                         ui.label(t.wall);
                         changed |= ui
-                            .add(egui::Slider::new(&mut self.params.wall, WALL_RANGE.0..=WALL_RANGE.1).step_by(0.1).fixed_decimals(1))
+                            .add(
+                                egui::Slider::new(
+                                    &mut self.params.wall,
+                                    WALL_RANGE.0..=WALL_RANGE.1,
+                                )
+                                .step_by(0.1)
+                                .fixed_decimals(1),
+                            )
                             .changed();
                     });
                     ui.horizontal(|ui| {
@@ -524,38 +638,92 @@ impl GeneratorApp {
 
             ActiveTab::Tools => {
                 card(ui, pal, t.part, |ui| {
-                    changed |= stepper(ui, t.units_wide, Some(t.units_hint), &mut self.params.units_x, UNITS_RANGE);
-                    changed |= stepper(ui, t.units_deep, Some(t.units_hint), &mut self.params.units_y, UNITS_RANGE);
-                    changed |= stepper(ui, t.height_u, Some(t.height_hint), &mut self.params.height_u, (3, 10));
+                    changed |= stepper(
+                        ui,
+                        t.units_wide,
+                        Some(t.units_hint),
+                        &mut self.params.units_x,
+                        UNITS_RANGE,
+                    );
+                    changed |= stepper(
+                        ui,
+                        t.units_deep,
+                        Some(t.units_hint),
+                        &mut self.params.units_y,
+                        UNITS_RANGE,
+                    );
+                    changed |= stepper(
+                        ui,
+                        t.height_u,
+                        Some(t.height_hint),
+                        &mut self.params.height_u,
+                        (3, 10),
+                    );
                     ui.label(RichText::new(t.height_hint).size(12.5).color(pal.muted));
                 });
                 ui.add_space(8.0);
 
                 card(ui, pal, t.tool_features, |ui| {
                     ui.horizontal(|ui| {
-                        if ui.selectable_label(self.params.tool_hole_kind == ToolHoleKind::HexBit, t.tool_kind_hex).clicked() {
+                        if ui
+                            .selectable_label(
+                                self.params.tool_hole_kind == ToolHoleKind::HexBit,
+                                t.tool_kind_hex,
+                            )
+                            .clicked()
+                        {
                             self.params.tool_hole_kind = ToolHoleKind::HexBit;
                             self.params.tool_hole_size = 6.8;
                             changed = true;
                         }
-                        if ui.selectable_label(self.params.tool_hole_kind == ToolHoleKind::Round, t.tool_kind_round).clicked() {
+                        if ui
+                            .selectable_label(
+                                self.params.tool_hole_kind == ToolHoleKind::Round,
+                                t.tool_kind_round,
+                            )
+                            .clicked()
+                        {
                             self.params.tool_hole_kind = ToolHoleKind::Round;
                             self.params.tool_hole_size = 4.0;
                             changed = true;
                         }
                     });
                     ui.add_space(4.0);
-                    changed |= stepper(ui, t.tool_holes_across, None, &mut self.params.tool_holes_x, (1, 16));
-                    changed |= stepper(ui, t.tool_holes_deep, None, &mut self.params.tool_holes_y, (1, 16));
+                    changed |= stepper(
+                        ui,
+                        t.tool_holes_across,
+                        None,
+                        &mut self.params.tool_holes_x,
+                        (1, 16),
+                    );
+                    changed |= stepper(
+                        ui,
+                        t.tool_holes_deep,
+                        None,
+                        &mut self.params.tool_holes_y,
+                        (1, 16),
+                    );
                     ui.add_space(4.0);
                     ui.horizontal(|ui| {
                         ui.label(t.tool_hole_depth);
-                        changed |= ui.add(egui::Slider::new(&mut self.params.tool_hole_depth, 3.0..=35.0).step_by(0.5).fixed_decimals(1)).changed();
+                        changed |= ui
+                            .add(
+                                egui::Slider::new(&mut self.params.tool_hole_depth, 3.0..=35.0)
+                                    .step_by(0.5)
+                                    .fixed_decimals(1),
+                            )
+                            .changed();
                     });
                     ui.horizontal(|ui| {
                         let r = ui.label(t.tool_hole_size);
                         r.on_hover_text(t.tool_hole_size_hint);
-                        changed |= ui.add(egui::Slider::new(&mut self.params.tool_hole_size, 2.0..=15.0).step_by(0.1).fixed_decimals(1)).changed();
+                        changed |= ui
+                            .add(
+                                egui::Slider::new(&mut self.params.tool_hole_size, 2.0..=15.0)
+                                    .step_by(0.1)
+                                    .fixed_decimals(1),
+                            )
+                            .changed();
                     });
                     ui.add_space(4.0);
                     changed |= toggle(ui, pal, t.magnets, t.magnets_hint, &mut self.params.magnets);
@@ -570,9 +738,27 @@ impl GeneratorApp {
 
             ActiveTab::Batteries => {
                 card(ui, pal, t.part, |ui| {
-                    changed |= stepper(ui, t.units_wide, Some(t.units_hint), &mut self.params.units_x, UNITS_RANGE);
-                    changed |= stepper(ui, t.units_deep, Some(t.units_hint), &mut self.params.units_y, UNITS_RANGE);
-                    changed |= stepper(ui, t.height_u, Some(t.height_hint), &mut self.params.height_u, (3, 14));
+                    changed |= stepper(
+                        ui,
+                        t.units_wide,
+                        Some(t.units_hint),
+                        &mut self.params.units_x,
+                        UNITS_RANGE,
+                    );
+                    changed |= stepper(
+                        ui,
+                        t.units_deep,
+                        Some(t.units_hint),
+                        &mut self.params.units_y,
+                        UNITS_RANGE,
+                    );
+                    changed |= stepper(
+                        ui,
+                        t.height_u,
+                        Some(t.height_hint),
+                        &mut self.params.height_u,
+                        (3, 14),
+                    );
                     ui.label(RichText::new(t.height_hint).size(12.5).color(pal.muted));
                 });
                 ui.add_space(8.0);
@@ -585,7 +771,13 @@ impl GeneratorApp {
                             (BatteryKind::AAA, "AAA (Ø11.2)", 11.2, 20.0, 4),
                             (BatteryKind::B18650, "18650 (Ø19.2)", 19.2, 35.0, 6),
                             (BatteryKind::B21700, "21700 (Ø22.4)", 22.4, 40.0, 7),
-                            (BatteryKind::Custom, "Свой", self.params.battery_hole_dia, self.params.battery_hole_depth, self.params.height_u),
+                            (
+                                BatteryKind::Custom,
+                                "Свой",
+                                self.params.battery_hole_dia,
+                                self.params.battery_hole_depth,
+                                self.params.height_u,
+                            ),
                         ];
                         for (k, label, dia, depth, def_h) in types {
                             let on = self.params.battery_kind == k;
@@ -601,16 +793,40 @@ impl GeneratorApp {
                         }
                     });
                     ui.add_space(4.0);
-                    changed |= stepper(ui, t.battery_holes_across, None, &mut self.params.battery_holes_x, (1, 16));
-                    changed |= stepper(ui, t.battery_holes_deep, None, &mut self.params.battery_holes_y, (1, 16));
+                    changed |= stepper(
+                        ui,
+                        t.battery_holes_across,
+                        None,
+                        &mut self.params.battery_holes_x,
+                        (1, 16),
+                    );
+                    changed |= stepper(
+                        ui,
+                        t.battery_holes_deep,
+                        None,
+                        &mut self.params.battery_holes_y,
+                        (1, 16),
+                    );
                     ui.add_space(4.0);
                     ui.horizontal(|ui| {
                         ui.label(t.battery_hole_depth);
-                        changed |= ui.add(egui::Slider::new(&mut self.params.battery_hole_depth, 5.0..=65.0).step_by(0.5).fixed_decimals(1)).changed();
+                        changed |= ui
+                            .add(
+                                egui::Slider::new(&mut self.params.battery_hole_depth, 5.0..=65.0)
+                                    .step_by(0.5)
+                                    .fixed_decimals(1),
+                            )
+                            .changed();
                     });
                     ui.horizontal(|ui| {
                         ui.label(t.battery_hole_dia);
-                        changed |= ui.add(egui::Slider::new(&mut self.params.battery_hole_dia, 6.0..=35.0).step_by(0.1).fixed_decimals(1)).changed();
+                        changed |= ui
+                            .add(
+                                egui::Slider::new(&mut self.params.battery_hole_dia, 6.0..=35.0)
+                                    .step_by(0.1)
+                                    .fixed_decimals(1),
+                            )
+                            .changed();
                     });
                     ui.add_space(4.0);
                     changed |= toggle(ui, pal, t.magnets, t.magnets_hint, &mut self.params.magnets);
@@ -625,15 +841,39 @@ impl GeneratorApp {
 
             ActiveTab::Baseplates => {
                 card(ui, pal, t.part, |ui| {
-                    changed |= stepper(ui, t.units_wide, Some(t.units_hint), &mut self.params.units_x, UNITS_RANGE);
-                    changed |= stepper(ui, t.units_deep, Some(t.units_hint), &mut self.params.units_y, UNITS_RANGE);
+                    changed |= stepper(
+                        ui,
+                        t.units_wide,
+                        Some(t.units_hint),
+                        &mut self.params.units_x,
+                        UNITS_RANGE,
+                    );
+                    changed |= stepper(
+                        ui,
+                        t.units_deep,
+                        Some(t.units_hint),
+                        &mut self.params.units_y,
+                        UNITS_RANGE,
+                    );
                     ui.label(RichText::new(t.units_hint).size(12.5).color(pal.muted));
                 });
                 ui.add_space(8.0);
 
                 card(ui, pal, t.plate_features, |ui| {
-                    changed |= toggle(ui, pal, t.plate_skeleton, t.plate_skeleton_hint, &mut self.params.plate_skeleton);
-                    changed |= toggle(ui, pal, t.magnets, t.plate_magnets_hint, &mut self.params.plate_magnets);
+                    changed |= toggle(
+                        ui,
+                        pal,
+                        t.plate_skeleton,
+                        t.plate_skeleton_hint,
+                        &mut self.params.plate_skeleton,
+                    );
+                    changed |= toggle(
+                        ui,
+                        pal,
+                        t.magnets,
+                        t.plate_magnets_hint,
+                        &mut self.params.plate_magnets,
+                    );
                     ui.horizontal(|ui| {
                         ui.label(t.color);
                         ui.color_edit_button_srgb(&mut self.color);
@@ -644,14 +884,32 @@ impl GeneratorApp {
 
             ActiveTab::Lids => {
                 card(ui, pal, t.part, |ui| {
-                    changed |= stepper(ui, t.units_wide, Some(t.units_hint), &mut self.params.units_x, UNITS_RANGE);
-                    changed |= stepper(ui, t.units_deep, Some(t.units_hint), &mut self.params.units_y, UNITS_RANGE);
+                    changed |= stepper(
+                        ui,
+                        t.units_wide,
+                        Some(t.units_hint),
+                        &mut self.params.units_x,
+                        UNITS_RANGE,
+                    );
+                    changed |= stepper(
+                        ui,
+                        t.units_deep,
+                        Some(t.units_hint),
+                        &mut self.params.units_y,
+                        UNITS_RANGE,
+                    );
                     ui.label(RichText::new(t.units_hint).size(12.5).color(pal.muted));
                 });
                 ui.add_space(8.0);
 
                 card(ui, pal, t.lid_features, |ui| {
-                    changed |= toggle(ui, pal, t.lid_finger_scoop, t.lid_finger_scoop_hint, &mut self.params.lid_finger_scoop);
+                    changed |= toggle(
+                        ui,
+                        pal,
+                        t.lid_finger_scoop,
+                        t.lid_finger_scoop_hint,
+                        &mut self.params.lid_finger_scoop,
+                    );
                     ui.horizontal(|ui| {
                         ui.label(t.color);
                         ui.color_edit_button_srgb(&mut self.color);
@@ -662,12 +920,15 @@ impl GeneratorApp {
         }
 
         card(ui, pal, t.export, |ui| {
-            let ready = self.mesh.is_some() && self.job.is_none() && self.built.as_ref() == Some(&self.params.clamped());
+            let ready = self.mesh.is_some()
+                && self.job.is_none()
+                && self.built.as_ref() == Some(&self.params.clamped());
             ui.horizontal(|ui| {
                 let w = (ui.available_width() - 8.0) / 2.0;
-                let primary = egui::Button::new(RichText::new(t.save_3mf).strong().color(pal.on_accent))
-                    .fill(pal.accent)
-                    .min_size(egui::vec2(w, 38.0));
+                let primary =
+                    egui::Button::new(RichText::new(t.save_3mf).strong().color(pal.on_accent))
+                        .fill(pal.accent)
+                        .min_size(egui::vec2(w, 38.0));
                 if ui.add_enabled(ready, primary).clicked() {
                     self.export(true);
                 }
@@ -677,7 +938,11 @@ impl GeneratorApp {
                 }
             });
             if let Some((msg, err)) = &self.status {
-                ui.label(RichText::new(msg).size(12.5).color(if *err { pal.error } else { pal.muted }));
+                ui.label(RichText::new(msg).size(12.5).color(if *err {
+                    pal.error
+                } else {
+                    pal.muted
+                }));
             }
         });
         ui.add_space(8.0);
@@ -688,7 +953,11 @@ impl GeneratorApp {
             }
         });
         ui.add_space(4.0);
-        ui.label(RichText::new(format!("generator_3mf v{}", generator_3mf_core::VERSION)).size(11.0).color(pal.muted));
+        ui.label(
+            RichText::new(format!("generator_3mf v{}", generator_3mf_core::VERSION))
+                .size(11.0)
+                .color(pal.muted),
+        );
 
         if changed {
             self.preset = Preset::Custom;
@@ -704,9 +973,10 @@ impl GeneratorApp {
         // Stats overlay.
         let p = self.built.clone().unwrap_or_else(|| self.params.clamped());
         let s = p.size();
-        let mut lines = vec![
-            format!("{}: {:.1} × {:.1} × {:.1} mm", t.size, s[0], s[1], s[2]),
-        ];
+        let mut lines = vec![format!(
+            "{}: {:.1} × {:.1} × {:.1} mm",
+            t.size, s[0], s[1], s[2]
+        )];
         match p.kind {
             Kind::Bin => {
                 lines.push(format!("{}: {} × {}", t.compartments, p.div_x, p.div_y));
@@ -716,10 +986,16 @@ impl GeneratorApp {
                     ToolHoleKind::HexBit => "1/4\"",
                     ToolHoleKind::Round => "Ø",
                 };
-                lines.push(format!("Отсеки: {} × {} ({})", p.tool_holes_x, p.tool_holes_y, k_desc));
+                lines.push(format!(
+                    "Отсеки: {} × {} ({})",
+                    p.tool_holes_x, p.tool_holes_y, k_desc
+                ));
             }
             Kind::BatteryTray => {
-                lines.push(format!("{}: {} × {} (Ø{:.1} мм)", t.compartments, p.battery_holes_x, p.battery_holes_y, p.battery_hole_dia));
+                lines.push(format!(
+                    "{}: {} × {} (Ø{:.1} мм)",
+                    t.compartments, p.battery_holes_x, p.battery_holes_y, p.battery_hole_dia
+                ));
             }
             Kind::Lid => {
                 lines.push(format!("Крышка {}×{}", p.units_x, p.units_y));
@@ -742,10 +1018,22 @@ impl GeneratorApp {
             Kind::Lid => t.lid,
             Kind::Baseplate => t.baseplate,
         };
-        painter.text(egui::pos2(rect.left() + 14.0, y), egui::Align2::LEFT_TOP, kind, egui::FontId::proportional(16.0), pal.text);
+        painter.text(
+            egui::pos2(rect.left() + 14.0, y),
+            egui::Align2::LEFT_TOP,
+            kind,
+            egui::FontId::proportional(16.0),
+            pal.text,
+        );
         y += 22.0;
         for l in &lines {
-            painter.text(egui::pos2(rect.left() + 14.0, y), egui::Align2::LEFT_TOP, l, egui::FontId::proportional(13.0), pal.muted);
+            painter.text(
+                egui::pos2(rect.left() + 14.0, y),
+                egui::Align2::LEFT_TOP,
+                l,
+                egui::FontId::proportional(13.0),
+                pal.muted,
+            );
             y += 18.0;
         }
         let mut wy = rect.bottom() - 30.0;
@@ -758,7 +1046,13 @@ impl GeneratorApp {
             if *w == Warning::ScoopReduced {
                 continue;
             }
-            painter.text(egui::pos2(rect.left() + 14.0, wy), egui::Align2::LEFT_BOTTOM, format!("⚠ {msg}"), egui::FontId::proportional(13.0), pal.warn);
+            painter.text(
+                egui::pos2(rect.left() + 14.0, wy),
+                egui::Align2::LEFT_BOTTOM,
+                format!("⚠ {msg}"),
+                egui::FontId::proportional(13.0),
+                pal.warn,
+            );
             wy -= 18.0;
         }
         painter.text(
@@ -769,12 +1063,27 @@ impl GeneratorApp {
             pal.muted,
         );
         if self.job.is_some() || self.mesh.is_none() {
-            painter.text(rect.center(), egui::Align2::CENTER_CENTER, t.building, egui::FontId::proportional(15.0), pal.muted);
+            painter.text(
+                rect.center(),
+                egui::Align2::CENTER_CENTER,
+                t.building,
+                egui::FontId::proportional(15.0),
+                pal.muted,
+            );
         }
         // Reset button.
         let bw = 24.0 + 7.5 * t.reset_view.chars().count() as f32;
-        let br = egui::Rect::from_min_size(egui::pos2(rect.right() - bw - 10.0, rect.top() + 10.0), egui::vec2(bw, 30.0));
-        if ui.put(br, egui::Button::new(RichText::new(t.reset_view).size(12.5))).clicked() {
+        let br = egui::Rect::from_min_size(
+            egui::pos2(rect.right() - bw - 10.0, rect.top() + 10.0),
+            egui::vec2(bw, 30.0),
+        );
+        if ui
+            .put(
+                br,
+                egui::Button::new(RichText::new(t.reset_view).size(12.5)),
+            )
+            .clicked()
+        {
             self.preview.reset_view();
         }
     }
@@ -786,7 +1095,11 @@ fn paint_logo(p: &egui::Painter, r: egui::Rect, bg: Color32, fg: Color32) {
     let cell = inner.width() / 2.0;
     for i in 0..2 {
         for j in 0..2 {
-            let c = egui::Rect::from_min_size(inner.min + egui::vec2(i as f32 * cell, j as f32 * cell), egui::vec2(cell, cell)).shrink(1.2);
+            let c = egui::Rect::from_min_size(
+                inner.min + egui::vec2(i as f32 * cell, j as f32 * cell),
+                egui::vec2(cell, cell),
+            )
+            .shrink(1.2);
             p.rect_filled(c, 2.0, fg);
         }
     }
@@ -809,10 +1122,19 @@ impl eframe::App for GeneratorApp {
 
         let screen = ctx.screen_rect();
         let narrow = screen.width() < 760.0;
-        let bar = egui::Frame::none().fill(pal.bg).inner_margin(Margin::symmetric(14.0, 10.0));
-        egui::TopBottomPanel::top("header").frame(bar).show(ctx, |ui| self.header(ui, &pal, narrow));
+        let bar = egui::Frame::none()
+            .fill(pal.bg)
+            .inner_margin(Margin::symmetric(14.0, 10.0));
+        egui::TopBottomPanel::top("header")
+            .frame(bar)
+            .show(ctx, |ui| self.header(ui, &pal, narrow));
 
-        let body = egui::Frame::none().fill(pal.bg).inner_margin(Margin { left: 14.0, right: 14.0, top: 0.0, bottom: 14.0 });
+        let body = egui::Frame::none().fill(pal.bg).inner_margin(Margin {
+            left: 14.0,
+            right: 14.0,
+            top: 0.0,
+            bottom: 14.0,
+        });
         if narrow {
             let h = (screen.height() * 0.42).clamp(220.0, 520.0);
             egui::TopBottomPanel::top("preview_mobile")
@@ -835,7 +1157,9 @@ impl eframe::App for GeneratorApp {
                         self.controls(ui, &pal);
                     });
                 });
-            egui::CentralPanel::default().frame(body).show(ctx, |ui| self.preview_area(ui, &pal));
+            egui::CentralPanel::default()
+                .frame(body)
+                .show(ctx, |ui| self.preview_area(ui, &pal));
         }
     }
 
@@ -865,12 +1189,19 @@ pub fn icon() -> egui::IconData {
             if inside(fx, fy, 2.0, 2.0, 62.0, 62.0, 14.0) {
                 let mut c = [0xe0u8, 0x66, 0x2b, 255];
                 let cells = [(14.0, 14.0), (33.0, 14.0), (14.0, 33.0), (33.0, 33.0)];
-                if cells.iter().any(|&(cx, cy)| inside(fx, fy, cx, cy, cx + 17.0, cy + 17.0, 4.0)) {
+                if cells
+                    .iter()
+                    .any(|&(cx, cy)| inside(fx, fy, cx, cy, cx + 17.0, cy + 17.0, 4.0))
+                {
                     c = [255, 247, 235, 255];
                 }
                 rgba[i..i + 4].copy_from_slice(&c);
             }
         }
     }
-    egui::IconData { rgba, width: n as u32, height: n as u32 }
+    egui::IconData {
+        rgba,
+        width: n as u32,
+        height: n as u32,
+    }
 }

@@ -16,11 +16,19 @@ fn dot(a: V3, b: V3) -> f32 {
     a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 }
 fn cross(a: V3, b: V3) -> V3 {
-    [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]
+    [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    ]
 }
 fn norm(a: V3) -> V3 {
     let l = dot(a, a).sqrt();
-    if l > 0.0 { [a[0] / l, a[1] / l, a[2] / l] } else { a }
+    if l > 0.0 {
+        [a[0] / l, a[1] / l, a[2] / l]
+    } else {
+        a
+    }
 }
 fn scale(a: V3, s: f32) -> V3 {
     [a[0] * s, a[1] * s, a[2] * s]
@@ -88,8 +96,16 @@ impl Preview {
             self.tris.push([a, b, c]);
         }
         let (lo, hi) = mesh.bounds();
-        self.center = [((lo[0] + hi[0]) / 2.0) as f32, ((lo[1] + hi[1]) / 2.0) as f32, ((lo[2] + hi[2]) / 2.0) as f32];
-        let d = [(hi[0] - lo[0]) as f32, (hi[1] - lo[1]) as f32, (hi[2] - lo[2]) as f32];
+        self.center = [
+            ((lo[0] + hi[0]) / 2.0) as f32,
+            ((lo[1] + hi[1]) / 2.0) as f32,
+            ((lo[2] + hi[2]) / 2.0) as f32,
+        ];
+        let d = [
+            (hi[0] - lo[0]) as f32,
+            (hi[1] - lo[1]) as f32,
+            (hi[2] - lo[2]) as f32,
+        ];
         self.radius = (dot(d, d).sqrt() / 2.0).max(1.0);
         self.version += 1;
     }
@@ -133,25 +149,49 @@ impl Preview {
             h = ((h as f32) * s) as usize;
         }
         let edge = pal.preview_edge.to_array();
-        let key = Key { version: self.version, yaw: self.yaw, pitch: self.pitch, zoom: self.zoom, w, h, color, edge };
+        let key = Key {
+            version: self.version,
+            yaw: self.yaw,
+            pitch: self.pitch,
+            zoom: self.zoom,
+            w,
+            h,
+            color,
+            edge,
+        };
         if self.key != Some(key) || self.texture.is_none() {
             let ss = if w * h <= 700_000 { 2 } else { 1 };
             let img = self.render(w, h, ss, color, pal.preview_edge);
             match &mut self.texture {
                 Some(t) => t.set(img, TextureOptions::LINEAR),
-                None => self.texture = Some(ui.ctx().load_texture("preview", img, TextureOptions::LINEAR)),
+                None => {
+                    self.texture = Some(ui.ctx().load_texture(
+                        "preview",
+                        img,
+                        TextureOptions::LINEAR,
+                    ))
+                }
             }
             self.key = Some(key);
         }
         if let Some(t) = &self.texture {
-            painter.image(t.id(), rect, Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)), Color32::WHITE);
+            painter.image(
+                t.id(),
+                rect,
+                Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+                Color32::WHITE,
+            );
         }
     }
 
     fn render(&self, w: usize, h: usize, ss: usize, color: [u8; 3], edge: Color32) -> ColorImage {
         let rw = w * ss;
         let rh = h * ss;
-        let dir = [self.pitch.cos() * self.yaw.sin(), -self.pitch.cos() * self.yaw.cos(), self.pitch.sin()];
+        let dir = [
+            self.pitch.cos() * self.yaw.sin(),
+            -self.pitch.cos() * self.yaw.cos(),
+            self.pitch.sin(),
+        ];
         let dist = self.radius / (FOV / 2.0).sin() / self.zoom;
         let eye = add(self.center, scale(dir, dist));
         let fwd = scale(dir, -1.0);
@@ -159,7 +199,10 @@ impl Preview {
         let up = cross(right, fwd);
         let focal = (rw.min(rh) as f32 / 2.0) / (FOV / 2.0).tan();
         let (cx, cy) = (rw as f32 / 2.0, rh as f32 / 2.0);
-        let light = norm(add(add(scale(fwd, -1.0), scale(up, 0.9)), scale(right, -0.5)));
+        let light = norm(add(
+            add(scale(fwd, -1.0), scale(up, 0.9)),
+            scale(right, -0.5),
+        ));
         let fill = norm(add(scale(fwd, -1.0), scale(right, 0.8)));
         let head = scale(fwd, -1.0);
         let base = [color[0] as f32, color[1] as f32, color[2] as f32];
@@ -181,19 +224,44 @@ impl Preview {
                     behind = true;
                     break;
                 }
-                sp[k] = [cx + dot(v, right) / z * focal, cy - dot(v, up) / z * focal, 1.0 / z];
+                sp[k] = [
+                    cx + dot(v, right) / z * focal,
+                    cy - dot(v, up) / z * focal,
+                    1.0 / z,
+                ];
             }
             if behind {
                 continue;
             }
-            let area = (sp[1][0] - sp[0][0]) * (sp[2][1] - sp[0][1]) - (sp[2][0] - sp[0][0]) * (sp[1][1] - sp[0][1]);
+            let area = (sp[1][0] - sp[0][0]) * (sp[2][1] - sp[0][1])
+                - (sp[2][0] - sp[0][0]) * (sp[1][1] - sp[0][1]);
             if area.abs() < 1e-8 {
                 continue;
             }
-            let x0 = sp.iter().map(|p| p[0]).fold(f32::MAX, f32::min).floor().max(0.0) as i64;
-            let x1 = sp.iter().map(|p| p[0]).fold(f32::MIN, f32::max).ceil().min(rw as f32 - 1.0) as i64;
-            let y0 = sp.iter().map(|p| p[1]).fold(f32::MAX, f32::min).floor().max(0.0) as i64;
-            let y1 = sp.iter().map(|p| p[1]).fold(f32::MIN, f32::max).ceil().min(rh as f32 - 1.0) as i64;
+            let x0 = sp
+                .iter()
+                .map(|p| p[0])
+                .fold(f32::MAX, f32::min)
+                .floor()
+                .max(0.0) as i64;
+            let x1 = sp
+                .iter()
+                .map(|p| p[0])
+                .fold(f32::MIN, f32::max)
+                .ceil()
+                .min(rw as f32 - 1.0) as i64;
+            let y0 = sp
+                .iter()
+                .map(|p| p[1])
+                .fold(f32::MAX, f32::min)
+                .floor()
+                .max(0.0) as i64;
+            let y1 = sp
+                .iter()
+                .map(|p| p[1])
+                .fold(f32::MIN, f32::max)
+                .ceil()
+                .min(rh as f32 - 1.0) as i64;
             if x0 > x1 || y0 > y1 {
                 continue;
             }
@@ -202,8 +270,12 @@ impl Preview {
                 let fy = py as f32 + 0.5;
                 for px in x0..=x1 {
                     let fx = px as f32 + 0.5;
-                    let w0 = ((sp[1][0] - fx) * (sp[2][1] - fy) - (sp[2][0] - fx) * (sp[1][1] - fy)) * inv;
-                    let w1 = ((sp[2][0] - fx) * (sp[0][1] - fy) - (sp[0][0] - fx) * (sp[2][1] - fy)) * inv;
+                    let w0 = ((sp[1][0] - fx) * (sp[2][1] - fy)
+                        - (sp[2][0] - fx) * (sp[1][1] - fy))
+                        * inv;
+                    let w1 = ((sp[2][0] - fx) * (sp[0][1] - fy)
+                        - (sp[0][0] - fx) * (sp[2][1] - fy))
+                        * inv;
                     let w2 = 1.0 - w0 - w1;
                     if w0 < -1e-5 || w1 < -1e-5 || w2 < -1e-5 {
                         continue;
@@ -223,7 +295,10 @@ impl Preview {
             .normals
             .iter()
             .map(|&n| {
-                let k = 0.34 + 0.38 * dot(n, light).max(0.0) + 0.22 * dot(n, fill).max(0.0) + 0.24 * dot(n, head).max(0.0);
+                let k = 0.34
+                    + 0.38 * dot(n, light).max(0.0)
+                    + 0.22 * dot(n, fill).max(0.0)
+                    + 0.24 * dot(n, head).max(0.0);
                 let k = k.min(1.15);
                 [base[0] * k, base[1] * k, base[2] * k]
             })
@@ -293,8 +368,8 @@ impl Preview {
             }
         }
         ColorImage {
-    size: [w, h],
-    pixels: out,
-}
+            size: [w, h],
+            pixels: out,
+        }
     }
 }
