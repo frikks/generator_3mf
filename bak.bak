@@ -1,0 +1,3 @@
+#[[bin]]
+#name = "generator_3mf"
+#path = "src/main.rs"
