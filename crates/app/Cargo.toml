@@ -20,6 +20,7 @@ resources = "res"
 
 [package.metadata.android.application]
 icon = "@mipmap/ic_launcher"
+roundIcon = "@mipmap/ic_launcher_round"
 label = "ГЕНЕРАТОР 3MF"
 
 [dependencies]
