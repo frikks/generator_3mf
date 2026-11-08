@@ -8,7 +8,9 @@ name = "generator_3mf"
 crate-type = ["cdylib", "rlib"]
 path = "src/lib.rs"
 
-
+[[bin]]
+name = "generator_3mf"
+path = "src/main.rs"
 
 [package.metadata.android]
 package = "com.frikks.generator_3mf"
